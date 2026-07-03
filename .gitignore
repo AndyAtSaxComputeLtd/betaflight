@@ -67,3 +67,11 @@ AGENTS.md
 CLAUDE.md
 /tasks
 /user
+.coderabbit.yaml
+.gitattributes
+.gitmodules
+.devcontainer/containerfile
+.devcontainer/containerfile.gazebo
+.devcontainer/devcontainer.gazebo.json
+.devcontainer/devcontainer.json
+.github/workflows/stale.yaml
