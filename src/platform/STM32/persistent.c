@@ -65,10 +65,9 @@ void persistentObjectRTCEnable(void)
 #if !defined(STM32G4)
     // G4 library V1.0.0 __HAL_RTC_WRITEPROTECTION_ENABLE/DISABLE macro does not use handle parameter
     RTC_HandleTypeDef rtcHandle = { .Instance = RTC };
-    UNUSED(rtcHandle);
 #endif
 
-#if !defined(STM32H7) && !defined(STM32H5) && !defined(STM32C5) && !defined(STM32N6)
+#if !defined(STM32H7)
     __HAL_RCC_PWR_CLK_ENABLE(); // Enable Access to PWR
 #endif
 
@@ -131,7 +130,7 @@ void persistentObjectInit(void)
 
     uint32_t wasSoftReset;
 
-#if defined(STM32H7) || defined(STM32H5) || defined(STM32C5) || defined(STM32N6)
+#ifdef STM32H7
     wasSoftReset = RCC->RSR & RCC_RSR_SFTRSTF;
 #else
     wasSoftReset = RCC->CSR & RCC_CSR_SFTRSTF;

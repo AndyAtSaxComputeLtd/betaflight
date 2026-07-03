@@ -66,10 +66,10 @@ typedef struct flashDeviceIO_s {
         extDevice_t *dev; // Device interface dependent handle (spi/i2c)
     #endif
     #ifdef USE_FLASH_QUADSPI
-        quadSpiResource_t *quadSpi;
+        QUADSPI_TypeDef *quadSpi;
     #endif
     #ifdef USE_FLASH_OCTOSPI
-        octoSpiResource_t *octoSpi;
+        OCTOSPI_TypeDef *octoSpi;
     #endif
     } handle;
     flashDeviceIoMode_e mode;

@@ -29,11 +29,14 @@
 #warning Do not use USE_CLI_DEBUG_PRINT for production builds.
 #endif
 
-#ifndef __MCU_NAME__
-#define __MCU_NAME__ "Unknown"
-#endif
+mcuTypeId_e getMcuTypeId(void)
+{
+    const mcuTypeInfo_t *mcuTypeInfo = getMcuTypeInfo();
+    return mcuTypeInfo ? mcuTypeInfo->id : MCU_TYPE_UNKNOWN;
+}
 
 const char *getMcuTypeName(void)
 {
-    return __MCU_NAME__;
+    const mcuTypeInfo_t *mcuTypeInfo = getMcuTypeInfo();
+    return mcuTypeInfo ? mcuTypeInfo->name : "Unknown";
 }

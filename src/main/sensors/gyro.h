@@ -55,7 +55,7 @@
 
 typedef union gyroLowpassFilter_u {
     pt1Filter_t pt1FilterState;
-    svfLowpassFilter_t svfLowpassFilterState;
+    biquadFilter_t biquadFilterState;
     pt2Filter_t pt2FilterState;
     pt3Filter_t pt3FilterState;
 } gyroLowpassFilter_t;
@@ -96,17 +96,17 @@ typedef struct gyro_s {
 
     // notch filters
     filterApplyFnPtr notchFilter1ApplyFn;
-    svfNotchFilter_t notchFilter1[XYZ_AXIS_COUNT];
+    biquadFilter_t notchFilter1[XYZ_AXIS_COUNT];
 
     filterApplyFnPtr notchFilter2ApplyFn;
-    svfNotchFilter_t notchFilter2[XYZ_AXIS_COUNT];
+    biquadFilter_t notchFilter2[XYZ_AXIS_COUNT];
 
     uint16_t accSampleRateHz;
     uint8_t gyroEnabledBitmask;
     uint8_t gyroDebugMode;
     bool gyroHasOverflowProtection;
     bool useMultiGyroDebugging;
-    int gyroDebugAxis;
+    flight_dynamics_index_t gyroDebugAxis;
 
 #ifdef USE_DYN_LPF
     uint8_t dynLpfFilter;
@@ -133,7 +133,7 @@ enum {
 enum {
     DYN_LPF_NONE = 0,
     DYN_LPF_PT1,
-    DYN_LPF_SVF,
+    DYN_LPF_BIQUAD,
     DYN_LPF_PT2,
     DYN_LPF_PT3,
 };
@@ -205,9 +205,4 @@ void dynLpfGyroUpdate(float throttle);
 #endif
 #ifdef USE_YAW_SPIN_RECOVERY
 void initYawSpinRecovery(int maxYawRate);
-#endif
-#ifdef USE_CRSF_ACCGYRO_TELEMETRY
-bool gyroHasDownsampledData(void);
-float gyroGetDownsampled(int axis);
-bool gyroStartDownsampledCycle(void);
 #endif

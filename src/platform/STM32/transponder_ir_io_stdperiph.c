@@ -28,14 +28,10 @@
 
 #include "drivers/dma.h"
 #include "drivers/dma_reqmap.h"
-#include "platform/dma.h"
 #include "drivers/io.h"
 #include "drivers/nvic.h"
 #include "platform/rcc.h"
 #include "drivers/timer.h"
-
-#include "platform/timer.h"
-
 #include "drivers/transponder_ir_arcitimer.h"
 #include "drivers/transponder_ir_erlt.h"
 #include "drivers/transponder_ir_ilap.h"
@@ -61,10 +57,10 @@ static void TRANSPONDER_DMA_IRQHandler(dmaChannelDescriptor_t* descriptor)
     }
 }
 
-bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
+void transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
 {
     if (!ioTag) {
-        return false;
+        return;
     }
 
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -72,21 +68,14 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     DMA_InitTypeDef DMA_InitStructure;
 
     const timerHardware_t *timerHardware = timerAllocate(ioTag, OWNER_TRANSPONDER, 0);
-    if (!timerHardware) {
-        timer = NULL;
-        dmaRef = NULL;
-        return false;
-    }
-    timer = (TIM_TypeDef *)timerHardware->tim;
+    timer = timerHardware->tim;
     alternateFunction = timerHardware->alternateFunction;
 
 #if defined(USE_DMA_SPEC)
     const dmaChannelSpec_t *dmaSpec = dmaGetChannelSpecByTimer(timerHardware);
 
     if (dmaSpec == NULL) {
-        timer = NULL;
-        dmaRef = NULL;
-        return false;
+        return;
     }
 
     dmaRef = dmaSpec->ref;
@@ -101,9 +90,7 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
 #endif
 
     if (dmaRef == NULL || !dmaAllocate(dmaGetIdentifier(dmaRef), OWNER_TRANSPONDER, 0)) {
-        timer = NULL;
-        dmaRef = NULL;
-        return false;
+        return;
     }
 
     transponderIO = IOGetByTag(ioTag);
@@ -113,10 +100,10 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     dmaEnable(dmaGetIdentifier(dmaRef));
     dmaSetHandler(dmaGetIdentifier(dmaRef), TRANSPONDER_DMA_IRQHandler, NVIC_PRIO_TRANSPONDER_DMA, 0);
 
-    RCC_ClockCmd(timerRCC(timerHardware->tim), ENABLE);
+    RCC_ClockCmd(timerRCC(timer), ENABLE);
 
-    uint16_t prescaler = timerGetPrescalerByDesiredMhz(timerHardware->tim, transponder->timer_hz);
-    uint16_t period = timerGetPeriodByPrescaler(timerHardware->tim, prescaler, transponder->timer_carrier_hz);
+    uint16_t prescaler = timerGetPrescalerByDesiredMhz(timer, transponder->timer_hz);
+    uint16_t period = timerGetPeriodByPrescaler(timer, prescaler, transponder->timer_carrier_hz);
 
     transponder->bitToggleOne = period / 2;
     /* Time base configuration */
@@ -150,7 +137,7 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     xDMA_DeInit(dmaRef);
 
     DMA_StructInit(&DMA_InitStructure);
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)timerCCR(timerHardware->tim, timerHardware->channel);
+    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)timerCCR(timer, timerHardware->channel);
 #if defined(STM32F4)
     DMA_InitStructure.DMA_Channel = dmaChannel;
     DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&(transponder->transponderIrDMABuffer);
@@ -171,8 +158,6 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     TIM_DMACmd(timer, timerDmaSource(timerHardware->channel), ENABLE);
 
     xDMA_ITConfig(dmaRef, DMA_IT_TC, ENABLE);
-
-    return true;
 }
 
 bool transponderIrInit(const ioTag_t ioTag, const transponderProvider_e provider)
@@ -195,14 +180,12 @@ bool transponderIrInit(const ioTag_t ioTag, const transponderProvider_e provider
             return false;
     }
 
-    if (!transponderIrHardwareInit(ioTag, &transponder)) {
-        return false;
-    }
+    transponderIrHardwareInit(ioTag, &transponder);
 
     return true;
 }
 
-bool transponderIrIsReady(void)
+bool isTransponderIrReady(void)
 {
     return !transponderIrDataTransferInProgress;
 }

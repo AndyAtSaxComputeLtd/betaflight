@@ -17,19 +17,18 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include "common/axis.h"
-
 #ifdef USE_WING
+
+#include "io/gps.h"
 
 extern float autopilotAngle[RP_AXIS_COUNT]; // NOTE: ANGLES ARE IN CENTIDEGREES
 
 void autopilotInit(void);
 void resetAltitudeControl(void);
 void setSticksActiveStatus(bool areSticksActive);
-void resetPositionControl(unsigned taskRateHz);
+void resetPositionControl(const gpsLocation_t *initialTargetLocation, unsigned taskRateHz);
 bool positionControl(void);
-void altitudeControl(float targetAltitudeCm, float taskIntervalS, float targetAltitudeVelCmS, float velLimitCmS);
+void altitudeControl(float targetAltitudeCm, float taskIntervalS, float targetAltitudeStep);
 
 bool isBelowLandingAltitude(void);
 float getAutopilotThrottle(void);

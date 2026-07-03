@@ -22,6 +22,10 @@
 
 #define NOINLINE __attribute__((noinline))
 
+#if !defined(UNIT_TEST) && !defined(SIMULATOR_BUILD) && !(USBD_DEBUG_LEVEL > 0)
+#pragma GCC poison sprintf snprintf
+#endif
+
 #ifdef USE_CONFIG
 #include "config.h"
 #endif
@@ -42,15 +46,3 @@
 #include "target.h"
 #include "target/common_post.h"
 #include "target/common_defaults_post.h"
-
-#if !defined(UNIT_TEST) && !ENABLE_SIMULATOR && !(USBD_DEBUG_LEVEL > 0)
-#ifdef ENABLE_STDIO_PREINCLUDE
-// Pre-include stdio.h so its declarations of sprintf/snprintf land before
-// the poison pragma. Toolchains like xtensa-esp-elf pull stdio.h in
-// transitively from IDF HAL headers; without this the declaration itself
-// trips the poison. Only platforms that opt in (see platform/platform.h) need
-// this; others keep the poison without dragging stdio.h into every TU.
-#include <stdio.h>
-#endif
-#pragma GCC poison sprintf snprintf
-#endif

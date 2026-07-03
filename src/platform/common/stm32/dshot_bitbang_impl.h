@@ -29,9 +29,7 @@
 #include "drivers/dshot.h"
 #include "pg/motor.h"
 
-#if !defined(X32M7)
 #define USE_DMA_REGISTER_CACHE
-#endif
 
 #define DEBUG_COUNT_INTERRUPT
 #define DEBUG_MONITOR_PACER
@@ -90,9 +88,6 @@
 #elif defined(AT32F435)
 #define BB_GPIO_PULLDOWN GPIO_PULL_DOWN
 #define BB_GPIO_PULLUP GPIO_PULL_UP
-#elif defined(X32M7)
-#define BB_GPIO_PULLDOWN GPIO_PULL_DOWN
-#define BB_GPIO_PULLUP GPIO_PULL_UP
 #else
 #define BB_GPIO_PULLDOWN GPIO_PuPd_DOWN
 #define BB_GPIO_PULLUP   GPIO_PuPd_UP
@@ -117,13 +112,6 @@ typedef struct dmaRegCache_s {
     uint32_t NDATA;
     uint32_t PADDR;
     uint32_t M0ADDR;
-#elif defined(STM32H5) || defined(STM32C5) || defined(STM32N6)
-    uint32_t CCR;
-    uint32_t CTR1;
-    uint32_t CTR2;
-    uint32_t CBR1;
-    uint32_t CSAR;
-    uint32_t CDAR;
 #else
 #error No MCU dependent code here
 #endif
@@ -133,7 +121,7 @@ typedef struct dmaRegCache_s {
 // Per pacer timer
 
 typedef struct bbPacer_s {
-    timerResource_t *tim;
+    TIM_TypeDef *tim;
     uint16_t dmaSources;
 } bbPacer_t;
 
@@ -208,7 +196,6 @@ typedef struct bbPort_s {
     uint32_t portInputCount;
     bool inputActive;
     volatile bool telemetryPending;
-    bool telemetryAborted;
 
     // Misc
 #ifdef DEBUG_COUNT_INTERRUPT
@@ -284,9 +271,9 @@ void bbSwitchToInput(bbPort_t * bbPort);
 
 void bbTIM_TimeBaseInit(bbPort_t *bbPort, uint16_t period);
 #ifdef AT32F435
-void bbTIM_DMACmd(void *TIMx, uint16_t TIM_DMASource, confirm_state NewState);
+void bbTIM_DMACmd(TIM_TypeDef* TIMx, uint16_t TIM_DMASource, confirm_state NewState);
 #else
-void bbTIM_DMACmd(void *TIMx, uint16_t TIM_DMASource, FunctionalState NewState);
+void bbTIM_DMACmd(TIM_TypeDef* TIMx, uint16_t TIM_DMASource, FunctionalState NewState);
 #endif
 void bbDMA_ITConfig(bbPort_t *bbPort);
 #ifdef AT32F435

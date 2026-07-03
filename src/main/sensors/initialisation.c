@@ -82,11 +82,6 @@ bool sensorsAutodetect(void)
     baroInit();
 #endif
 
-#if defined(STM32C5) && ENABLE_BARO_SPA06_PROBE
-    extern void spa06ProbeRun(void);
-    spa06ProbeRun();
-#endif
-
 #ifdef USE_MAG
     compassInit();
 #endif

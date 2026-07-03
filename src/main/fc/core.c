@@ -64,10 +64,6 @@
 #include "flight/alt_hold.h"
 #include "flight/pos_hold.h"
 
-#if ENABLE_FLIGHT_PLAN && !defined(USE_WING)
-#include "flight/flight_plan_nav.h"
-#endif
-
 #if defined(USE_DYN_NOTCH_FILTER)
 #include "flight/dyn_notch_filter.h"
 #endif
@@ -554,7 +550,7 @@ void tryArm(void)
 
 
     updateArmingStatus();
-    // set or clear armingDisabled flags, while arming is requested, whether armed or disarmed,
+    // set or clear armingDisabled flags, while arming is requested, whether armed or disarmed, 
 
 
     if (!isArmingDisabled()) {
@@ -1084,24 +1080,6 @@ void processRxModes(timeUs_t currentTimeUs)
     }
 #endif
 
-#if ENABLE_FLIGHT_PLAN && !defined(USE_WING)
-    if (ARMING_FLAG(ARMED)
-        && !FLIGHT_MODE(GPS_RESCUE_MODE)
-        && IS_RC_MODE_ACTIVE(BOXAUTOPILOT)
-        && sensors(SENSOR_ACC)
-        && sensors(SENSOR_GPS) && STATE(GPS_FIX)
-        && wasThrottleRaised()) {
-        if (!FLIGHT_MODE(AUTOPILOT_MODE)) {
-            ENABLE_FLIGHT_MODE(AUTOPILOT_MODE);
-            flightPlanNavEngage();
-        }
-        flightPlanNavUpdate(currentTimeUs);
-    } else if (FLIGHT_MODE(AUTOPILOT_MODE)) {
-        DISABLE_FLIGHT_MODE(AUTOPILOT_MODE);
-        flightPlanNavDisengage();
-    }
-#endif
-
     if (IS_RC_MODE_ACTIVE(BOXHORIZON) && canUseHorizonMode && sensors(SENSOR_ACC)) {
         DISABLE_FLIGHT_MODE(ANGLE_MODE);
         if (!FLIGHT_MODE(HORIZON_MODE)) {
@@ -1405,7 +1383,7 @@ FAST_CODE void taskFiltering(timeUs_t currentTimeUs)
 FAST_CODE void taskMainPidLoop(timeUs_t currentTimeUs)
 {
 
-#if ENABLE_SIMULATOR_GYROPID_SYNC
+#if defined(SIMULATOR_BUILD) && defined(SIMULATOR_GYROPID_SYNC)
     if (lockMainPID() != 0) return;
 #endif
 

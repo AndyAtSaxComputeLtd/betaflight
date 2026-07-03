@@ -21,7 +21,15 @@
     __stack (== StackTop)
 */
 
-INCLUDE "pico_rp2350_memory.ld"
+MEMORY
+{
+    /* TODO: Assuming for now that target has >= 4MB boot flash */
+    FLASH (rx)        : ORIGIN = 0x10000000, LENGTH = 4032K
+    FLASH_CONFIG (r)  : ORIGIN = 0x103F0000, LENGTH = 64K
+    RAM(rwx) : ORIGIN =  0x20000000, LENGTH = 512k
+    SCRATCH_X(rwx) : ORIGIN = 0x20080000, LENGTH = 4k
+    SCRATCH_Y(rwx) : ORIGIN = 0x20081000, LENGTH = 4k
+}
 
 ENTRY(_entry_point)
 
@@ -160,7 +168,6 @@ SECTIONS
         *(vtable)
 
         *(.time_critical*)
-        *(.fastcode*)
 
         /* remaining .text and .rodata; i.e. stuff we exclude above because we want it in RAM */
         *(.text*)
@@ -274,10 +281,6 @@ SECTIONS
     /* Base address where the config is stored. */
     __config_start = ORIGIN(FLASH_CONFIG);
     __config_end = ORIGIN(FLASH_CONFIG) + LENGTH(FLASH_CONFIG);
-
-    /* Base address for font data. */
-    __fontdata_start = ORIGIN(FLASH_FONT);
-    __fontdata_end = ORIGIN(FLASH_FONT) + LENGTH(FLASH_FONT);
 
     .pg_registry :
     {

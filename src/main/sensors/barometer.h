@@ -35,11 +35,7 @@ typedef enum {
     BARO_DPS310 = 8,
     BARO_2SMPB_02B = 9,
     BARO_LPS22DF = 10,
-    BARO_BMP580 = 11,
-    BARO_BMP581 = 12,
-    BARO_VIRTUAL = 13,
-    BARO_SPA06_003 = 14,
-    BARO_HARDWARE_COUNT
+    BARO_VIRTUAL = 11,
 } baroSensor_e;
 
 typedef struct barometerConfig_s {
@@ -55,9 +51,7 @@ typedef struct barometerConfig_s {
 
 PG_DECLARE(barometerConfig_t, barometerConfig);
 
-#ifndef TASK_BARO_RATE_HZ
 #define TASK_BARO_RATE_HZ 40                // Will be overwritten by the baro device driver
-#endif
 
 typedef struct baro_s {
     baroDev_t dev;

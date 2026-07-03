@@ -29,12 +29,10 @@
 
 #include "drivers/dma.h"
 #include "drivers/dma_reqmap.h"
-#include "platform/dma.h"
 #include "drivers/io.h"
 #include "drivers/nvic.h"
 #include "platform/rcc.h"
 #include "drivers/timer.h"
-#include "platform/timer.h"
 #include "drivers/transponder_ir_arcitimer.h"
 #include "drivers/transponder_ir_erlt.h"
 #include "drivers/transponder_ir_ilap.h"
@@ -60,17 +58,14 @@ FAST_IRQ_HANDLER static void TRANSPONDER_DMA_IRQHandler(dmaChannelDescriptor_t* 
     transponderIrDataTransferInProgress = 0;
 }
 
-bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
+void transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
 {
     if (!ioTag) {
-        return false;
+        return;
     }
 
     const timerHardware_t *timerHardware = timerAllocate(ioTag, OWNER_TRANSPONDER, 0);
-    if (!timerHardware) {
-        return false;
-    }
-    TMR_TypeDef *timer = (TMR_TypeDef *)timerHardware->tim;
+    TMR_TypeDef *timer = timerHardware->tim;
     timerChannel = timerHardware->channel;
     output = timerHardware->output;
     alternateFunction = timerHardware->alternateFunction;
@@ -79,7 +74,7 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     const dmaChannelSpec_t *dmaSpec = dmaGetChannelSpecByTimer(timerHardware);
 
     if (dmaSpec == NULL) {
-        return false;
+        return;
     }
 
     dmaResource_t *dmaRef = dmaSpec->ref;
@@ -91,15 +86,15 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
 
     dmaIdentifier_e dmaIdentifier = dmaGetIdentifier(dmaRef);
     if (dmaRef == NULL || !dmaAllocate(dmaIdentifier, OWNER_TRANSPONDER, 0)) {
-        return false;
+        return;
     }
 
     /* Time base configuration */
 
     TmrHandle.Instance = timer;
 
-    uint16_t prescaler = timerGetPrescalerByDesiredMhz(timerHardware->tim, transponder->timer_hz);
-    uint16_t period = timerGetPeriodByPrescaler(timerHardware->tim, prescaler, transponder->timer_carrier_hz);
+    uint16_t prescaler = timerGetPrescalerByDesiredMhz(timer, transponder->timer_hz);
+    uint16_t period = timerGetPeriodByPrescaler(timer, prescaler, transponder->timer_carrier_hz);
 
     transponder->bitToggleOne = period / 2;
 
@@ -109,7 +104,7 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     TmrHandle.Init.CounterMode = TMR_COUNTERMODE_UP;
     if (DAL_TMR_PWM_Init(&TmrHandle) != DAL_OK) {
         /* Initialization Error */
-        return false;
+        return;
     }
 
     /* IO configuration */
@@ -151,10 +146,10 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     /* Initialize TIMx DMA handle */
     if (DAL_DMA_Init(TmrHandle.hdma[dmaIndex]) != DAL_OK) {
         /* Initialization Error */
-        return false;
+        return;
     }
 
-    RCC_ClockCmd(timerRCC(timerHardware->tim), ENABLE);
+    RCC_ClockCmd(timerRCC(timer), ENABLE);
 
     /* PWM1 Mode configuration: Channel1 */
     TMR_OC_InitTypeDef  TMR_OCInitStructure;
@@ -168,24 +163,22 @@ bool transponderIrHardwareInit(ioTag_t ioTag, transponder_t *transponder)
     TMR_OCInitStructure.OCFastMode = TMR_OCFAST_DISABLE;
     if (DAL_TMR_PWM_ConfigChannel(&TmrHandle, &TMR_OCInitStructure, timerChannel) != DAL_OK) {
         /* Configuration Error */
-        return false;
+        return;
     }
 
     if (timerHardware->output & TIMER_OUTPUT_N_CHANNEL) {
         if (DAL_TMREx_PWMN_Start(&TmrHandle, timerChannel) != DAL_OK) {
             /* Starting PWM generation Error */
-            return false;
+            return;
         }
     } else {
         if (DAL_TMR_PWM_Start(&TmrHandle, timerChannel) != DAL_OK) {
             /* Starting PWM generation Error */
-            return false;
+            return;
         }
     }
 
     transponderInitialised = true;
-
-    return true;
 }
 
 bool transponderIrInit(const ioTag_t ioTag, const transponderProvider_e provider)
@@ -208,14 +201,12 @@ bool transponderIrInit(const ioTag_t ioTag, const transponderProvider_e provider
             return false;
     }
 
-    if (!transponderIrHardwareInit(ioTag, &transponder)) {
-        return false;
-    }
+    transponderIrHardwareInit(ioTag, &transponder);
 
     return true;
 }
 
-bool transponderIrIsReady(void)
+bool isTransponderIrReady(void)
 {
     return !transponderIrDataTransferInProgress;
 }

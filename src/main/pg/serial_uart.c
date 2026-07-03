@@ -36,7 +36,7 @@
 #include "drivers/serial_uart.h"
 #include "drivers/dma_reqmap.h"
 
-// TODO(hertz@): UARTDEV_CONFIG_MAX is measured to be exactly 8, which cannot accommodate even all the UARTs below
+// TODO(hertz@): UARTDEV_CONFIG_MAX is measured to be exactly 8, which cannot accomodate even all the UARTs below
 PG_REGISTER_ARRAY_WITH_RESET_FN(serialUartConfig_t, UARTDEV_CONFIG_MAX, serialUartConfig, PG_SERIAL_UART_CONFIG, 0);
 
 typedef struct uartDmaopt_s {
@@ -78,21 +78,6 @@ static const uartDmaopt_t uartDmaopt[] = {
 #endif
 #ifdef USE_UART10
     { SERIAL_PORT_UART10, UART10_TX_DMA_OPT, UART10_RX_DMA_OPT },
-#endif
-#ifdef USE_UART11
-    { SERIAL_PORT_UART11, UART11_TX_DMA_OPT, UART11_RX_DMA_OPT },
-#endif
-#ifdef USE_UART12
-    { SERIAL_PORT_UART12, UART12_TX_DMA_OPT, UART12_RX_DMA_OPT },
-#endif
-#ifdef USE_UART13
-    { SERIAL_PORT_UART13, UART13_TX_DMA_OPT, UART13_RX_DMA_OPT },
-#endif
-#ifdef USE_UART14
-    { SERIAL_PORT_UART14, UART14_TX_DMA_OPT, UART14_RX_DMA_OPT },
-#endif
-#ifdef USE_UART15
-    { SERIAL_PORT_UART15, UART15_TX_DMA_OPT, UART15_RX_DMA_OPT },
 #endif
 #ifdef USE_LPUART1
     { SERIAL_PORT_LPUART1, DMA_OPT_UNUSED, DMA_OPT_UNUSED },

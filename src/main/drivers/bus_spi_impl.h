@@ -22,8 +22,6 @@
 
 #include "platform.h"
 
-#include "drivers/bus_spi_types.h"
-
 #if PLATFORM_TRAIT_RCC
 #include "platform/rcc_types.h"
 #endif
@@ -41,7 +39,7 @@ typedef struct spiPinDef_s {
 
 typedef struct spiHardware_s {
     spiDevice_e device;
-    spiResource_t *reg;
+    SPI_TypeDef *reg;
     spiPinDef_t sckPins[MAX_SPI_PIN_SEL];
     spiPinDef_t misoPins[MAX_SPI_PIN_SEL];
     spiPinDef_t mosiPins[MAX_SPI_PIN_SEL];
@@ -61,7 +59,7 @@ typedef struct spiHardware_s {
 extern const spiHardware_t spiHardware[SPIDEV_COUNT];
 
 typedef struct spiDevice_s {
-    spiResource_t *dev;
+    SPI_TypeDef *dev;
     ioTag_t sck;
     ioTag_t miso;
     ioTag_t mosi;
@@ -74,7 +72,7 @@ typedef struct spiDevice_s {
     uint8_t af;
 #endif
 #if SPI_TRAIT_HANDLE
-    spiHalHandle_t *halHandle;
+    SPI_HandleTypeDef hspi;
 #endif
 #if PLATFORM_TRAIT_RCC
     rccPeriphTag_t rcc;
@@ -94,5 +92,5 @@ void spiInternalStartDMA(const extDevice_t *dev);
 void spiInternalStopDMA (const extDevice_t *dev);
 void spiInternalResetStream(dmaChannelDescriptor_t *descriptor);
 void spiInternalResetDescriptors(busDevice_t *bus);
-bool spiInternalReadWriteBufPolled(spiResource_t *instance, const uint8_t *txData, uint8_t *rxData, int len);
+bool spiInternalReadWriteBufPolled(SPI_TypeDef *instance, const uint8_t *txData, uint8_t *rxData, int len);
 void spiSequenceStart(const extDevice_t *dev);

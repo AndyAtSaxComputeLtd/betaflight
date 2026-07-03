@@ -132,9 +132,8 @@ static const pllConfig_t overclockLevels[] = {
   */
 
 static void SystemInitPLLParameters(void);
-static uint32_t SystemClockGetFlashLatency(void);
 void DAL_SysClkConfig(void);
-void Error_Handler(void);
+void DAL_ErrorHandler(void);
 
 /**
  * @brief     Setup the microcontroller system
@@ -150,7 +149,7 @@ void SystemInit(void)
     /* FPU settings */
 #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
       SCB->CPACR |= ((3UL << 10U * 2U)|(3UL << 11U * 2U));  /* set CP10 and CP11 Full Access */
-#endif /* (__FPU_PRESENT == 1U) && (__FPU_USED == 1U) */
+#endif
 
     /* Reset the RCM clock configuration to the default reset state */
     /* Set HSIEN bit */
@@ -197,7 +196,7 @@ void SystemCoreClockUpdate(void)
     uint32_t hse_value = persistentObjectRead(PERSISTENT_OBJECT_HSE_VALUE);
 
     /* Get SYSCLK source */
-    sysClock = RCM->CFG & RCM_CFG_SCLKSELSTS;
+    sysClock = RCM->CFG & RCM_CFG_SCLKSWSTS;
 
     switch (sysClock)
     {
@@ -251,6 +250,7 @@ void DAL_SysClkConfig(void)
 {
     RCM_ClkInitTypeDef RCM_ClkInitStruct = {0U};
     RCM_OscInitTypeDef RCM_OscInitStruct = {0U};
+    RCM_PeriphCLKInitTypeDef PeriphClk_InitStruct = {0U};
 
     uint32_t hse_value = persistentObjectRead(PERSISTENT_OBJECT_HSE_VALUE);
     uint32_t hse_mhz = hse_value / 1000000;
@@ -295,7 +295,7 @@ void DAL_SysClkConfig(void)
     RCM_OscInitStruct.HSICalibrationValue = 0x10;
     if(DAL_RCM_OscConfig(&RCM_OscInitStruct) != DAL_OK)
     {
-        Error_Handler();
+        DAL_ErrorHandler();
     }
 
     /* Configure clock */
@@ -304,12 +304,11 @@ void DAL_SysClkConfig(void)
     RCM_ClkInitStruct.AHBCLKDivider     = RCM_SYSCLK_DIV1;
     RCM_ClkInitStruct.APB1CLKDivider    = RCM_HCLK_DIV4;
     RCM_ClkInitStruct.APB2CLKDivider    = RCM_HCLK_DIV2;
-    if(DAL_RCM_ClockConfig(&RCM_ClkInitStruct, SystemClockGetFlashLatency()) != DAL_OK)
+    if(DAL_RCM_ClockConfig(&RCM_ClkInitStruct, FLASH_LATENCY_5) != DAL_OK)
     {
-        Error_Handler();
+        DAL_ErrorHandler();
     }
 
-#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx)
     /* I2S clock */
     // Configure PLLI2S for 27MHz operation
     // Use pll_input (1 or 2) to derive multiplier N for
@@ -318,12 +317,13 @@ void DAL_SysClkConfig(void)
 
     uint32_t plli2s_n = (PLLI2S_TARGET_FREQ_MHZ * PLLI2S_R) / pll_input;
 
-    RCM_PeriphCLKInitTypeDef PeriphClk_InitStruct = {0U};
     PeriphClk_InitStruct.PeriphClockSelection   = RCM_PERIPHCLK_I2S;
     PeriphClk_InitStruct.PLLI2S.PLL2A           = plli2s_n;
     PeriphClk_InitStruct.PLLI2S.PLL2C           = PLLI2S_R;
-    DAL_RCMEx_PeriphCLKConfig(&PeriphClk_InitStruct);
-#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx */
+    if (DAL_RCMEx_PeriphCLKConfig(&PeriphClk_InitStruct) != DAL_OK)
+    {
+        DAL_ErrorHandler();
+    }
 }
 
 /**
@@ -333,12 +333,11 @@ void DAL_SysClkConfig(void)
  *
  * @retval    None
  */
-void Error_Handler(void)
+void DAL_ErrorHandler(void)
 {
     /* When the function is needed, this function
        could be implemented in the user file
     */
-    __disable_irq();
     while(1)
     {
     }
@@ -368,7 +367,7 @@ LOCAL_UNUSED_FUNCTION static void AssertFailedHandler(uint8_t *file, uint32_t li
  */
 int SystemSYSCLKSource(void)
 {
-    return (int)((RCM->CFG & RCM_CFG_SCLKSELSTS) >> 2);
+    return (int)((RCM->CFG & RCM_CFG_SCLKSWSTS) >> 2);
 }
 
 /**
@@ -392,23 +391,19 @@ int SystemPLLSource(void)
  *
  * @retval None
  */
-void OverclockRebootIfNecessary(uint32_t targetMhz)
+void OverclockRebootIfNecessary(uint32_t overclockLevel)
 {
-    // targetMhz == 0 means "OFF" / use default (first entry)
-    if (targetMhz == 0) {
-        targetMhz = overclockLevels[0].mhz;
+    if (overclockLevel >= ARRAYLEN(overclockLevels)) {
+        return;
     }
 
-    for (unsigned i = 0; i < ARRAYLEN(overclockLevels); i++) {
-        if (overclockLevels[i].mhz == targetMhz) {
-            // Reboot to adjust overclock frequency
-            if (SystemCoreClock != targetMhz * 1000000U) {
-                persistentObjectWrite(PERSISTENT_OBJECT_OVERCLOCK_LEVEL, i);
-                __disable_irq();
-                NVIC_SystemReset();
-            }
-            return;
-        }
+    const pllConfig_t * const pll = overclockLevels + overclockLevel;
+
+    // Reboot to adjust overclock frequency
+    if (SystemCoreClock != pll->mhz * 1000000U) {
+        persistentObjectWrite(PERSISTENT_OBJECT_OVERCLOCK_LEVEL, overclockLevel);
+        __disable_irq();
+        NVIC_SystemReset();
     }
 }
 
@@ -453,24 +448,6 @@ static void SystemInitPLLParameters(void)
     pll_n = pll->n / pll_input;
     pll_p = pll->p;
     pll_q = pll->q;
-}
-
-static uint32_t SystemClockGetFlashLatency(void)
-{
-  uint32_t currentOverclockLevel = persistentObjectRead(PERSISTENT_OBJECT_OVERCLOCK_LEVEL);
-  uint32_t targetMhz = overclockLevels[0].mhz;
-
-  if (currentOverclockLevel < ARRAYLEN(overclockLevels)) {
-    targetMhz = overclockLevels[currentOverclockLevel].mhz;
-  }
-
-  if (targetMhz > 216U) {
-    return FLASH_LATENCY_7;
-  }
-  if (targetMhz > 168U) {
-    return FLASH_LATENCY_6;
-  }
-  return FLASH_LATENCY_5;
 }
 
 /**

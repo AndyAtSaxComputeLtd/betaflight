@@ -45,60 +45,54 @@ static uint8_t spiRegisteredDeviceCount = 0;
 spiDevice_t spiDevice[SPIDEV_COUNT];
 busDevice_t spiBusDevice[SPIDEV_COUNT];
 
-spiDevice_e spiDeviceByInstance(const spiResource_t *instance)
+spiDevice_e spiDeviceByInstance(const SPI_TypeDef *instance)
 {
 #ifdef USE_SPI_DEVICE_0
-    if (instance == (const spiResource_t *)SPI0) {
+    if (instance == SPI0) {
         return SPIDEV_0;
     }
 #endif
 
 #ifdef USE_SPI_DEVICE_1
-    if (instance == (const spiResource_t *)SPI1) {
+    if (instance == SPI1) {
         return SPIDEV_1;
     }
 #endif
 
 #ifdef USE_SPI_DEVICE_2
-    if (instance == (const spiResource_t *)SPI2) {
+    if (instance == SPI2) {
         return SPIDEV_2;
     }
 #endif
 
 #ifdef USE_SPI_DEVICE_3
-    if (instance == (const spiResource_t *)SPI3) {
+    if (instance == SPI3) {
         return SPIDEV_3;
     }
 #endif
 
 #ifdef USE_SPI_DEVICE_4
-    if (instance == (const spiResource_t *)SPI4) {
+    if (instance == SPI4) {
         return SPIDEV_4;
     }
 #endif
 
 #ifdef USE_SPI_DEVICE_5
-    if (instance == (const spiResource_t *)SPI5) {
+    if (instance == SPI5) {
         return SPIDEV_5;
     }
 #endif
 
 #ifdef USE_SPI_DEVICE_6
-    if (instance == (const spiResource_t *)SPI6) {
+    if (instance == SPI6) {
         return SPIDEV_6;
-    }
-#endif
-
-#ifdef USE_SPI_DEVICE_7
-    if (instance == (const spiResource_t *)SPI7) {
-        return SPIDEV_7;
     }
 #endif
 
     return SPIINVALID;
 }
 
-spiResource_t *spiInstanceByDevice(spiDevice_e device)
+SPI_TypeDef *spiInstanceByDevice(spiDevice_e device)
 {
     if (device == SPIINVALID || device >= SPIDEV_COUNT) {
         return NULL;
@@ -134,10 +128,6 @@ bool spiInit(spiDevice_e device)
 
 #if !defined(USE_SPI_DEVICE_6)
     case SPIDEV_6:
-#endif
-
-#if !defined(USE_SPI_DEVICE_7)
-    case SPIDEV_7:
 #endif
         return false;
     default:
@@ -426,9 +416,6 @@ uint8_t spiGetRegisteredDeviceCount(void)
 
 uint8_t spiGetExtDeviceCount(const extDevice_t *dev)
 {
-    if (!dev || !dev->bus) {
-        return 0;
-    }
     return dev->bus->deviceCount;
 }
 

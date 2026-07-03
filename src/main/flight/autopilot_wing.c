@@ -42,8 +42,10 @@
 
 float autopilotAngle[RP_AXIS_COUNT];
 
-void resetPositionControl(unsigned taskRateHz)
+void resetPositionControl(const gpsLocation_t *initialTargetLocation, unsigned taskRateHz)
 {
+    // from pos_hold.c (or other client) when initiating position hold at target location
+    UNUSED(initialTargetLocation);
     UNUSED(taskRateHz);
 }
 
@@ -54,12 +56,11 @@ void autopilotInit(void)
 void resetAltitudeControl (void) {
 }
 
-void altitudeControl(float targetAltitudeCm, float taskIntervalS, float targetAltitudeVelCmS, float velLimitCmS)
+void altitudeControl(float targetAltitudeCm, float taskIntervalS, float targetAltitudeStep)
 {
     UNUSED(targetAltitudeCm);
     UNUSED(taskIntervalS);
-    UNUSED(targetAltitudeVelCmS);
-    UNUSED(velLimitCmS);
+    UNUSED(targetAltitudeStep);
 }
 
 void setSticksActiveStatus(bool areSticksActive)

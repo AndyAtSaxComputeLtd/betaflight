@@ -28,13 +28,12 @@
 
 #include "build/debug.h"
 
-#include "drivers/dma.h"
 #include "drivers/dma_reqmap.h"
 #include "drivers/io.h"
 #include "drivers/io_impl.h"
-#include "drivers/resource.h"
-#include "platform/dma.h"
 #include "platform/rcc.h"
+#include "drivers/resource.h"
+#include "drivers/dma.h"
 
 #include "drivers/sensor.h"
 

@@ -62,6 +62,7 @@ typedef void (*IOTraverseFuncPtr_t)(IO_t io);
 
 void IOTraversePins(IOTraverseFuncPtr_t func);
 
+GPIO_TypeDef* IO_GPIO(IO_t io);
 uint16_t IO_Pin(IO_t io);
 
 typedef enum {

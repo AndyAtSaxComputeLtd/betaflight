@@ -4,8 +4,6 @@ struct barrierTrace {
     int enter, leave;
 };
 
-#ifdef __APPLE__
-
 int testAtomicBarrier_C(struct barrierTrace *b0, struct barrierTrace *b1, struct barrierTrace sample[][2])
 {
     int sIdx = 0;
@@ -37,24 +35,3 @@ int testAtomicBarrier_C(struct barrierTrace *b0, struct barrierTrace *b1, struct
 #undef ATOMIC_BARRIER_ENTER
 #undef ATOMIC_BARRIER_LEAVE
 }
-
-#else
-
-int testAtomicBarrier_C(struct barrierTrace *b0, struct barrierTrace *b1, struct barrierTrace sample[][2])
-{
-    int sIdx = 0;
-    b0->enter = 0; b0->leave = 0;
-    b1->enter = 0; b1->leave = 0;
-    sample[sIdx][0]=*b0; sample[sIdx][1]=*b1; sIdx++;
-    b0->enter = 1; b1->enter = 1;
-    sample[sIdx][0]=*b0; sample[sIdx][1]=*b1; sIdx++;
-    b0->enter = 2;
-    sample[sIdx][0]=*b0; sample[sIdx][1]=*b1; sIdx++;
-    b0->leave = 1;
-    sample[sIdx][0]=*b0; sample[sIdx][1]=*b1; sIdx++;
-    b0->leave = 2; b1->leave = 1;
-    sample[sIdx][0]=*b0; sample[sIdx][1]=*b1; sIdx++;
-    return sIdx;
-}
-
-#endif

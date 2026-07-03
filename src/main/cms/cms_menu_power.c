@@ -39,10 +39,9 @@
 
 #include "config/config.h"
 
-uint8_t batteryConfig_voltageMeterSource;
-uint8_t batteryConfig_currentMeterSource;
+voltageMeterSource_e batteryConfig_voltageMeterSource;
+currentMeterSource_e batteryConfig_currentMeterSource;
 
-static uint8_t cmsBatteryProfileIndex;
 uint16_t batteryConfig_vbatmincellvoltage;
 uint16_t batteryConfig_vbatmaxcellvoltage;
 uint16_t batteryConfig_vbatwarningcellvoltage;
@@ -64,10 +63,9 @@ static const void *cmsx_Power_onEnter(displayPort_t *pDisp)
     batteryConfig_voltageMeterSource = batteryConfig()->voltageMeterSource;
     batteryConfig_currentMeterSource = batteryConfig()->currentMeterSource;
 
-    cmsBatteryProfileIndex = systemConfig()->activeBatteryProfile;
-    batteryConfig_vbatmincellvoltage = batteryProfiles(cmsBatteryProfileIndex)->vbatmincellvoltage;
-    batteryConfig_vbatmaxcellvoltage = batteryProfiles(cmsBatteryProfileIndex)->vbatmaxcellvoltage;
-    batteryConfig_vbatwarningcellvoltage = batteryProfiles(cmsBatteryProfileIndex)->vbatwarningcellvoltage;
+    batteryConfig_vbatmincellvoltage = batteryConfig()->vbatmincellvoltage;
+    batteryConfig_vbatmaxcellvoltage = batteryConfig()->vbatmaxcellvoltage;
+    batteryConfig_vbatwarningcellvoltage = batteryConfig()->vbatwarningcellvoltage;
 
     voltageSensorADCConfig_vbatscale = voltageSensorADCConfig(0)->vbatscale;
 
@@ -90,9 +88,9 @@ static const void *cmsx_Power_onExit(displayPort_t *pDisp, const OSD_Entry *self
     batteryConfigMutable()->voltageMeterSource = batteryConfig_voltageMeterSource;
     batteryConfigMutable()->currentMeterSource = batteryConfig_currentMeterSource;
 
-    batteryProfilesMutable(cmsBatteryProfileIndex)->vbatmincellvoltage = batteryConfig_vbatmincellvoltage;
-    batteryProfilesMutable(cmsBatteryProfileIndex)->vbatmaxcellvoltage = batteryConfig_vbatmaxcellvoltage;
-    batteryProfilesMutable(cmsBatteryProfileIndex)->vbatwarningcellvoltage = batteryConfig_vbatwarningcellvoltage;
+    batteryConfigMutable()->vbatmincellvoltage = batteryConfig_vbatmincellvoltage;
+    batteryConfigMutable()->vbatmaxcellvoltage = batteryConfig_vbatmaxcellvoltage;
+    batteryConfigMutable()->vbatwarningcellvoltage = batteryConfig_vbatwarningcellvoltage;
 
     voltageSensorADCConfigMutable(0)->vbatscale = voltageSensorADCConfig_vbatscale;
 

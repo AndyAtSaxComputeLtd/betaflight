@@ -20,7 +20,7 @@ SECTIONS {
     PROVIDE_HIDDEN (___pg_resetdata_end = . );
   }
 }
-INSERT BEFORE .fini_array;
+INSERT AFTER .text;
 
 
 

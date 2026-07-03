@@ -26,14 +26,13 @@
 
 typedef struct octoSpiHardware_s {
     octoSpiDevice_e device;
-    octoSpiResource_t *reg;
+    OCTOSPI_TypeDef *reg;
 } octoSpiHardware_t;
 
 typedef struct octoSpiDevice_s {
-    octoSpiResource_t *dev;
+    OCTOSPI_TypeDef *dev;
 } octoSpiDevice_t;
 
-extern const octoSpiHardware_t octoSpiHardware[];
 extern octoSpiDevice_t octoSpiDevice[OCTOSPIDEV_COUNT];
 
 void octoSpiInitDevice(octoSpiDevice_e device);

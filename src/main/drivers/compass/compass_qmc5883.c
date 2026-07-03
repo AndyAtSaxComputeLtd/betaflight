@@ -25,7 +25,7 @@
 
 #include "platform.h"
 
-#if defined(USE_MAG_QMC5883L) || defined(USE_MAG_QMC5883P)
+#ifdef USE_MAG_QMC5883
 
 #include "common/axis.h"
 #include "common/maths.h"
@@ -126,11 +126,14 @@
 
 // Status register bits
 #define QMC5883P_STATUS_DATA_READY     0x01
-#define QMC5883P_STATUS_OVL            0x02  // magnetic field overflow (exceeds range), NOT data register locking
+#define QMC5883P_STATUS_DATA_OVERRUN   0x02
 
 // Special configuration registers and values
 #define QMC5883P_REG_XYZ_UNLOCK        0x29
 #define QMC5883P_XYZ_SIGN_CONFIG       0x06
+
+// Unlock register for data overrun recovery (uses Z_MSB register)
+#define QMC5883P_REG_DATA_UNLOCK       QMC5883P_REG_DATA_OUTPUT_Z_MSB
 
 // Default configuration for Betaflight
 #define QMC5883P_DEFAULT_CONF1         (QMC5883P_MODE_CONTINUOUS | QMC5883P_ODR_100HZ | QMC5883P_RNG_8G | QMC5883P_OSR1_8)
@@ -169,9 +172,9 @@ static const qmc_descriptor_t qmc5883p_desc = {
     .i2c_address = QMC5883P_I2C_ADDRESS,
     .reg_status = QMC5883P_REG_STATUS,
     .reg_data = QMC5883P_REG_DATA_OUTPUT_X,
-    .reg_data_unlock = 0,                       // P has no data register locking
+    .reg_data_unlock = QMC5883P_REG_DATA_UNLOCK,
     .status_data_ready_mask = QMC5883P_STATUS_DATA_READY,
-    .status_data_overrun_mask = 0,              // P has no DOR bit; bit 1 is OVL (magnetic overflow), not data lock
+    .status_data_overrun_mask = QMC5883P_STATUS_DATA_OVERRUN,
     .default_odr_hz = 100,
 };
 
@@ -286,7 +289,7 @@ static bool qmc5883Read(magDev_t *magDev, int16_t *magData)
     return false;
 }
 
-bool qmc5883lDetect(magDev_t *magDev)
+static bool qmc5883lDetect(magDev_t *magDev)
 {
 
     extDevice_t *dev = &magDev->dev;
@@ -319,7 +322,7 @@ bool qmc5883lDetect(magDev_t *magDev)
     return false;
 }
 
-bool qmc5883pDetect(magDev_t *magDev)
+static bool qmc5883pDetect(magDev_t *magDev)
 {
     extDevice_t *dev = &magDev->dev;
 
@@ -347,6 +350,27 @@ bool qmc5883pDetect(magDev_t *magDev)
     magDev->init = qmc5883Init;
     magDev->read = qmc5883Read;
     return true;
+}
+
+static void resetI2CAddress(magDev_t *magDev)
+{
+    extDevice_t *dev = &magDev->dev;
+    if (dev->bus->busType == BUS_TYPE_I2C) {
+        dev->busType_u.i2c.address = 0; // ensure probe sets its default
+    }
+}
+
+bool qmc5883Detect(magDev_t *magDev)
+{
+    resetI2CAddress(magDev);
+    if (qmc5883lDetect(magDev)) {
+        return true;
+    }
+    resetI2CAddress(magDev);
+    if (qmc5883pDetect(magDev)) {
+        return true;
+    }
+    return false;
 }
 
 #endif

@@ -41,7 +41,7 @@
 
 quadSpiDevice_t quadSpiDevice[QUADSPIDEV_COUNT] = { 0 };
 
-quadSpiDevice_e quadSpiDeviceByInstance(quadSpiResource_t *instance)
+quadSpiDevice_e quadSpiDeviceByInstance(QUADSPI_TypeDef *instance)
 {
     if (!instance) {
         return QUADSPIINVALID;
@@ -54,7 +54,7 @@ quadSpiDevice_e quadSpiDeviceByInstance(quadSpiResource_t *instance)
     return QUADSPIINVALID;
 }
 
-quadSpiResource_t *quadSpiInstanceByDevice(quadSpiDevice_e device)
+QUADSPI_TypeDef *quadSpiInstanceByDevice(quadSpiDevice_e device)
 {
     if (device == QUADSPIINVALID || device >= QUADSPIDEV_COUNT) {
         return NULL;
@@ -79,7 +79,7 @@ bool quadSpiInit(quadSpiDevice_e device)
     return false;
 }
 
-uint32_t quadSpiTimeoutUserCallback(quadSpiResource_t *instance)
+uint32_t quadSpiTimeoutUserCallback(QUADSPI_TypeDef *instance)
 {
     quadSpiDevice_e device = quadSpiDeviceByInstance(instance);
     if (device == QUADSPIINVALID) {
@@ -89,7 +89,7 @@ uint32_t quadSpiTimeoutUserCallback(quadSpiResource_t *instance)
     return quadSpiDevice[device].errorCount;
 }
 
-uint16_t quadSpiGetErrorCounter(quadSpiResource_t *instance)
+uint16_t quadSpiGetErrorCounter(QUADSPI_TypeDef *instance)
 {
     quadSpiDevice_e device = quadSpiDeviceByInstance(instance);
     if (device == QUADSPIINVALID) {
@@ -98,7 +98,7 @@ uint16_t quadSpiGetErrorCounter(quadSpiResource_t *instance)
     return quadSpiDevice[device].errorCount;
 }
 
-void quadSpiResetErrorCounter(quadSpiResource_t *instance)
+void quadSpiResetErrorCounter(QUADSPI_TypeDef *instance)
 {
     quadSpiDevice_e device = quadSpiDeviceByInstance(instance);
     if (device != QUADSPIINVALID) {

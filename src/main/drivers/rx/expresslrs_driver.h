@@ -24,9 +24,8 @@
 
 #pragma once
 
-struct timerHardware_s;
-void expressLrsInitialiseTimer(const struct timerHardware_s *timHw, timerOvrHandlerRec_t *timerUpdateCb);
-void expressLrsTimerEnableIRQs(const struct timerHardware_s *timer);
+void expressLrsInitialiseTimer(TIM_TypeDef *timer, timerOvrHandlerRec_t *timerUpdateCb);
+void expressLrsTimerEnableIRQs(void);
 void expressLrsUpdateTimerInterval(uint16_t intervalUs);
 void expressLrsUpdatePhaseShift(int32_t newPhaseShift);
 void expressLrsOnTimerTickISR(void);

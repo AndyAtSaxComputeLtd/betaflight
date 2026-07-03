@@ -17,28 +17,19 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "common/axis.h"
-
 #ifndef USE_WING
 
-#define AP_HOVER_THROTTLE_DEFAULT 1275U
+#include "io/gps.h"
 
 extern float autopilotAngle[RP_AXIS_COUNT]; // NOTE: ANGLES ARE IN CENTIDEGREES
 
 void autopilotInit(void);
 void resetAltitudeControl(void);
 void setSticksActiveStatus(bool areSticksActive);
-void resetPositionControl(unsigned taskRateHz);
+void resetPositionControl(const gpsLocation_t *initialTargetLocation, unsigned taskRateHz);
 void posControlOutput(void);
 bool positionControl(void);
-void altitudeControl(float targetAltitudeCm, float taskIntervalS, float targetAltitudeVelCmS, float velLimitCmS);
-
-uint16_t autopilotGetEffectiveHoverThrottlePwm(void);
-void autopilotCaptureHoverThrottleForAltHold(void);
-void autopilotClearAltHoldHoverThrottle(void);
+void altitudeControl(float targetAltitudeCm, float taskIntervalS, float targetAltitudeStep);
 
 bool isBelowLandingAltitude(void);
 float getAutopilotThrottle(void);

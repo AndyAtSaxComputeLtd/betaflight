@@ -33,9 +33,12 @@
 
 #define PWM_TIMER_1MHZ        MHZ_TO_HZ(1)
 
+// TODO: move the implementation defintions to impl header (platform)
+struct timerHardware_s;
+
 typedef struct {
-    volatile uint32_t *ccr;
-    timerResource_t   *tim;
+    volatile timCCR_t *ccr;
+    TIM_TypeDef       *tim;
 } timerChannel_t;
 
 typedef struct {
@@ -52,8 +55,7 @@ extern FAST_DATA_ZERO_INIT uint8_t pwmMotorCount;
 
 bool motorPwmDevInit(motorDevice_t *device, const motorDevConfig_t *motorDevConfig, uint16_t idlePulse);
 
-void pwmOutputConfig(timerChannel_t *channel, const timerHardware_t *timerHardware, uint32_t hz, uint16_t period, uint16_t value, uint8_t inversion);
-void pwmWriteChannel(timerChannel_t *channel, uint32_t value);
+void pwmOutConfig(timerChannel_t *channel, const timerHardware_t *timerHardware, uint32_t hz, uint16_t period, uint16_t value, uint8_t inversion);
 
 pwmOutputPort_t *pwmGetMotors(void);
 bool pwmIsSynced(void);

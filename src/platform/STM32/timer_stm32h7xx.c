@@ -31,7 +31,6 @@
 #include "stm32h7xx.h"
 #include "platform/rcc.h"
 #include "drivers/timer.h"
-#include "platform/timer.h"
 
 const timerDef_t timerDefinitions[HARDWARE_TIMER_DEFINITION_COUNT] = {
     { .TIMx = TIM1,  .rcc = RCC_APB2(TIM1),   .inputIrq = TIM1_CC_IRQn},
@@ -166,9 +165,8 @@ const timerHardware_t fullTimerHardware[FULL_TIMER_CHANNEL_COUNT] = {
 };
 #endif
 
-uint32_t timerClockFromInstance(const timerResource_t *tim)
+uint32_t timerClock(const TIM_TypeDef *tim)
 {
-    const TIM_TypeDef *tim_ptr = (const TIM_TypeDef *)tim;
     int timpre;
     uint32_t pclk;
     uint32_t ppre;
@@ -179,7 +177,7 @@ uint32_t timerClockFromInstance(const timerResource_t *tim)
     // "Ratio between clock timer and pclk"
     // (Tables are the same, just D2 or CD difference)
 
-#if defined(STM32H743xx) || defined(STM32H750xx) || defined(STM32H723xx) || defined(STM32H725xx) || defined(STM32H730xx)  || defined(STM32H735xx) || defined(STM32H757xx)
+#if defined(STM32H743xx) || defined(STM32H750xx) || defined(STM32H723xx) || defined(STM32H725xx) || defined(STM32H730xx)  || defined(STM32H735xx)
 #define PERIPH_PRESCALER(bus) ((RCC->D2CFGR & RCC_D2CFGR_D2PPRE ## bus) >> RCC_D2CFGR_D2PPRE ## bus ## _Pos)
 #elif defined(STM32H7A3xx) || defined(STM32H7A3xxQ)
 #define PERIPH_PRESCALER(bus) ((RCC->CDCFGR2 & RCC_CDCFGR2_CDPPRE ## bus) >> RCC_CDCFGR2_CDPPRE ## bus ## _Pos)
@@ -187,7 +185,7 @@ uint32_t timerClockFromInstance(const timerResource_t *tim)
 #error Unknown MCU type
 #endif
 
-    if (tim_ptr == TIM1 || tim_ptr == TIM8 || tim_ptr == TIM15 || tim_ptr == TIM16 || tim_ptr == TIM17) {
+    if (tim == TIM1 || tim == TIM8 || tim == TIM15 || tim == TIM16 || tim == TIM17) {
         // Timers on APB2
         pclk = HAL_RCC_GetPCLK2Freq();
         ppre = PERIPH_PRESCALER(2);
@@ -209,10 +207,5 @@ uint32_t timerClockFromInstance(const timerResource_t *tim)
     return pclk * periphToKernel[index];
 
 #undef PERIPH_PRESCALER
-}
-
-uint32_t timerClock(const timerHardware_t *timHw)
-{
-    return timerClockFromInstance(timHw->tim);
 }
 #endif

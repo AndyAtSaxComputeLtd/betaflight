@@ -200,34 +200,37 @@ static void sdcardSdio_init(const sdcardConfig_t *config, const spiPinConfig_t *
         return;
     }
 
-#if ENABLE_SDIO_EXTERNAL_DMA
+#ifdef USE_DMA_SPEC
+#if !defined(STM32H7) // H7 uses IDMA
     const dmaChannelSpec_t *dmaChannelSpec = dmaGetChannelSpecByPeripheral(DMA_PERIPH_SDIO, 0, sdioConfig()->dmaopt);
-    dmaResource_t *dmaRef = dmaChannelSpec ? dmaChannelSpec->ref : NULL;
 
-    if (!dmaRef) {
+    if (!dmaChannelSpec) {
         sdcard.state = SDCARD_STATE_NOT_PRESENT;
         return;
     }
 
-    sdcard.dmaIdentifier = dmaGetIdentifier(dmaRef);
+    sdcard.dmaIdentifier = dmaGetIdentifier(dmaChannelSpec->ref);
 
     if (sdcard.dmaIdentifier == 0) {
         sdcard.state = SDCARD_STATE_NOT_PRESENT;
         return;
     }
-#else
-    dmaResource_t *dmaRef = NULL;
+#endif
 #endif
     if (sdioConfig()->useCache) {
         sdcard.useCache = 1;
     } else {
         sdcard.useCache = 0;
     }
-
-    if (!SD_InitialiseHardware(dmaRef)) {
-        sdcard.state = SDCARD_STATE_NOT_PRESENT;
-        return;
-    }
+#ifdef USE_DMA_SPEC
+#if defined(STM32H7) // H7 uses IDMA
+    SD_Initialize_LL(0);
+#else
+    SD_Initialize_LL((DMA_ARCH_TYPE *)dmaChannelSpec->ref);
+#endif
+#else
+    SD_Initialize_LL(SDCARD_SDIO_DMA_OPT);
+#endif
 
     if (sdcard_isInserted()) {
         if (SD_Init() != 0) {
@@ -545,7 +548,7 @@ static sdcardOperationStatus_e sdcardSdio_writeBlock(uint32_t blockIndex, uint8_
  * Returns:
  *     SDCARD_OPERATION_SUCCESS     - Multi-block write has been queued
  *     SDCARD_OPERATION_BUSY        - The card is already busy and cannot accept your write
- *     SDCARD_OPERATION_FAILURE     - A fatal error occurred, card will be reset
+ *     SDCARD_OPERATION_FAILURE     - A fatal error occured, card will be reset
  */
 static sdcardOperationStatus_e sdcardSdio_beginWriteBlocks(uint32_t blockIndex, uint32_t blockCount)
 {

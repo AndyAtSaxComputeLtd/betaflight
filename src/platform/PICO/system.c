@@ -24,10 +24,7 @@
 
 #include "platform.h"
 
-#include "common/maths.h"
-#include "common/time.h"
 #include "drivers/system.h"
-#include "drivers/time.h"
 
 #include "drivers/io.h"
 #include "drivers/light_led.h"
@@ -115,7 +112,7 @@ void systemInit(void)
     // load the unique id into a local array
     pico_unique_board_id_t id;
     pico_get_unique_board_id(&id);
-    memcpy(&systemUniqueId, &id.id, MIN(sizeof(systemUniqueId), (uint32_t)PICO_UNIQUE_BOARD_ID_SIZE_BYTES));
+    memcpy(&systemUniqueId, &id.id, MIN(sizeof(systemUniqueId), PICO_UNIQUE_BOARD_ID_SIZE_BYTES));
 
 
 #ifdef USE_MULTICORE
@@ -135,23 +132,19 @@ void systemResetToBootloader(bootloaderRequestType_e requestType)
     }
 }
 
-// We can make use of time_us_64 if BF defines USE_64BIT_TIME in future, but that will require some changes
-STATIC_ASSERT(sizeof(timeMs_t) == sizeof(uint32_t), timeMs_t_is_32_bit_failed);
-STATIC_ASSERT(sizeof(timeUs_t) == sizeof(uint32_t), timeUs_t_is_32_bit_failed);
-
 // Return system uptime in milliseconds (rollover in 49 days)
-timeMs_t millis(void)
+uint32_t millis(void)
 {
-    return (timeMs_t)(time_us_64() / 1000);
+    return (uint32_t)(time_us_64() / 1000);
 }
 
 // Return system uptime in micros (rollover in 71 mins)
-timeUs_t micros(void)
+uint32_t micros(void)
 {
     return time_us_32();
 }
 
-timeUs_t microsISR(void)
+uint32_t microsISR(void)
 {
     return micros();
 }
@@ -255,3 +248,16 @@ void unusedPinsInit(void)
     IOTraversePins(unusedPinInit);
 }
 
+const mcuTypeInfo_t *getMcuTypeInfo(void)
+{
+    static const mcuTypeInfo_t info = {
+#if defined(RP2350A)
+        .id = MCU_TYPE_RP2350A, .name = "RP2350A"
+#elif defined(RP2350B)
+        .id = MCU_TYPE_RP2350B, .name = "RP2350B"
+#else
+#error MCU Type info not defined for PICO / variant
+#endif
+    };
+    return &info;
+}

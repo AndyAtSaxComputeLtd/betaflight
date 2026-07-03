@@ -35,24 +35,18 @@
 #include "drivers/system.h"
 #include "drivers/io.h"
 #include "drivers/dma.h"
-#include "platform/dma.h"
 #include "drivers/nvic.h"
 #include "platform/rcc.h"
 
 #include "drivers/serial.h"
 #include "drivers/serial_uart.h"
 #include "drivers/serial_uart_impl.h"
-#include "platform/serial_uart_hal.h"
-
-extern struct uartHalHandle_s uartHalHandles[UARTDEV_COUNT];
-extern struct dmaHalHandle_s uartRxDmaHalHandles[UARTDEV_COUNT];
-extern struct dmaHalHandle_s uartTxDmaHalHandles[UARTDEV_COUNT];
 
 const uartHardware_t uartHardware[UARTDEV_COUNT] = {
 #ifdef USE_UART1
     {
         .identifier = SERIAL_PORT_USART1,
-        .reg = (usartResource_t *)USART1,
+        .reg = USART1,
         .rxDMAChannel = DMA_CHANNEL_4,
         .txDMAChannel = DMA_CHANNEL_4,
 #ifdef USE_UART1_RX_DMA
@@ -80,7 +74,7 @@ const uartHardware_t uartHardware[UARTDEV_COUNT] = {
 #ifdef USE_UART2
     {
         .identifier = SERIAL_PORT_USART2,
-        .reg = (usartResource_t *)USART2,
+        .reg = USART2,
         .rxDMAChannel = DMA_CHANNEL_4,
         .txDMAChannel = DMA_CHANNEL_4,
 #ifdef USE_UART2_RX_DMA
@@ -106,7 +100,7 @@ const uartHardware_t uartHardware[UARTDEV_COUNT] = {
 #ifdef USE_UART3
     {
         .identifier = SERIAL_PORT_USART3,
-        .reg = (usartResource_t *)USART3,
+        .reg = USART3,
         .rxDMAChannel = DMA_CHANNEL_4,
         .txDMAChannel = DMA_CHANNEL_4,
 #ifdef USE_UART3_RX_DMA
@@ -132,7 +126,7 @@ const uartHardware_t uartHardware[UARTDEV_COUNT] = {
 #ifdef USE_UART4
     {
         .identifier = SERIAL_PORT_UART4,
-        .reg = (usartResource_t *)UART4,
+        .reg = UART4,
         .rxDMAChannel = DMA_CHANNEL_4,
         .txDMAChannel = DMA_CHANNEL_4,
 #ifdef USE_UART4_RX_DMA
@@ -158,7 +152,7 @@ const uartHardware_t uartHardware[UARTDEV_COUNT] = {
 #ifdef USE_UART5
     {
         .identifier = SERIAL_PORT_UART5,
-        .reg = (usartResource_t *)UART5,
+        .reg = UART5,
         .rxDMAChannel = DMA_CHANNEL_4,
         .txDMAChannel = DMA_CHANNEL_4,
 #ifdef USE_UART5_RX_DMA
@@ -184,7 +178,7 @@ const uartHardware_t uartHardware[UARTDEV_COUNT] = {
 #ifdef USE_UART6
     {
         .identifier = SERIAL_PORT_USART6,
-        .reg = (usartResource_t *)USART6,
+        .reg = USART6,
         .rxDMAChannel = DMA_CHANNEL_5,
         .txDMAChannel = DMA_CHANNEL_5,
 #ifdef USE_UART6_RX_DMA
@@ -222,7 +216,7 @@ bool checkUsartTxOutput(uartPort_t *s)
             IOConfigGPIOAF(txIO, IOCFG_AF_PP, uart->hardware->af);
 
             // Enable the UART transmitter
-            SET_BIT(((USART_TypeDef *)s->USARTx)->CTRL1, USART_CTRL1_TXEN);
+            SET_BIT(s->Handle.Instance->CTRL1, USART_CTRL1_TXEN);
 
             return true;
         } else {
@@ -242,7 +236,7 @@ void uartTxMonitor(uartPort_t *s)
         IO_t txIO = IOGetByTag(uart->tx.pin);
 
         // Disable the UART transmitter
-        CLEAR_BIT(((USART_TypeDef *)s->USARTx)->CTRL1, USART_CTRL1_TXEN);
+        CLEAR_BIT(s->Handle.Instance->CTRL1, USART_CTRL1_TXEN);
 
         // Switch TX to an input with pullup so it's state can be monitored
         uart->txPinState = TX_PIN_MONITOR;
@@ -252,7 +246,14 @@ void uartTxMonitor(uartPort_t *s)
 
 static void handleUsartTxDma(uartPort_t *s)
 {
+    uartDevice_t *uart = container_of(s, uartDevice_t, port);
+
     uartTryStartTxDMA(s);
+
+    if (s->txDMAEmpty && (uart->txPinState != TX_PIN_IGNORE)) {
+        // Switch TX to an input with pullup so it's state can be monitored
+        uartTxMonitor(s);
+    }
 }
 
 void uartDmaIrqHandler(dmaChannelDescriptor_t* descriptor)
@@ -282,58 +283,50 @@ void uartDmaIrqHandler(dmaChannelDescriptor_t* descriptor)
 
 FAST_IRQ_HANDLER void uartIrqHandler(uartPort_t *s)
 {
-    USART_TypeDef *USARTx = (USART_TypeDef *)s->USARTx;
-
+    UART_HandleTypeDef *huart = &s->Handle;
+    uint32_t isrflags = READ_REG(huart->Instance->STS);
+    uint32_t cr1its = READ_REG(huart->Instance->CTRL1);
+    uint32_t cr3its = READ_REG(huart->Instance->CTRL3);
     /* UART in mode Receiver ---------------------------------------------------*/
-    if (!s->rxDMAResource && DDL_USART_IsActiveFlag_RXNE(USARTx)) {
-        uint8_t rbyte = DDL_USART_ReceiveData8(USARTx);
-
+    if (!s->rxDMAResource && (((isrflags & USART_STS_RXBNEFLG) != RESET) && ((cr1its & USART_CTRL1_RXBNEIEN) != RESET))) {
         if (s->port.rxCallback) {
-            s->port.rxCallback(rbyte, s->port.rxCallbackData);
+            s->port.rxCallback(huart->Instance->DATA, s->port.rxCallbackData);
         } else {
-            s->port.rxBuffer[s->port.rxBufferHead] = rbyte;
+            s->port.rxBuffer[s->port.rxBufferHead] = huart->Instance->DATA;
             s->port.rxBufferHead = (s->port.rxBufferHead + 1) % s->port.rxBufferSize;
         }
     }
 
     // Detect completion of transmission
-    if (DDL_USART_IsActiveFlag_TC(USARTx)) {
-        DDL_USART_ClearFlag_TC(USARTx);
-
+    if (((isrflags & USART_STS_TXCFLG) != RESET) && ((cr1its & USART_CTRL1_TXCIEN) != RESET)) {
         // Switch TX to an input with pullup so it's state can be monitored
         uartTxMonitor(s);
 
-#ifdef USE_DMA
-        if (s->txDMAResource) {
-            handleUsartTxDma(s);
-        }
-#endif
+        __DAL_UART_CLEAR_FLAG(huart, UART_IT_TC);
     }
 
-    if (
-#ifdef USE_DMA
-        !s->txDMAResource &&
-#endif
-        DDL_USART_IsActiveFlag_TXE(USARTx)) {
+    if (!s->txDMAResource && (((isrflags & USART_STS_TXBEFLG) != RESET) && ((cr1its & USART_CTRL1_TXBEIEN) != RESET))) {
         if (s->port.txBufferTail != s->port.txBufferHead) {
-            DDL_USART_TransmitData8(USARTx, s->port.txBuffer[s->port.txBufferTail]);
+            huart->Instance->DATA = (((uint16_t) s->port.txBuffer[s->port.txBufferTail]) & (uint16_t) 0x01FFU);
             s->port.txBufferTail = (s->port.txBufferTail + 1) % s->port.txBufferSize;
         } else {
-            DDL_USART_DisableIT_TXE(USARTx);
+            __DAL_UART_DISABLE_IT(huart, UART_IT_TXE);
         }
     }
 
-    /* UART Over-Run interrupt occurred -----------------------------------------*/
-    if (DDL_USART_IsActiveFlag_ORE(USARTx)) {
-        DDL_USART_ClearFlag_ORE(USARTx);
+    if (((isrflags & USART_STS_OVREFLG) != RESET) && (((cr1its & USART_CTRL1_RXBNEIEN) != RESET)
+                                                 || ((cr3its & USART_CTRL3_ERRIEN) != RESET))) {
+        __DAL_UART_CLEAR_OREFLAG(huart);
     }
 
-    if (DDL_USART_IsActiveFlag_IDLE(USARTx)) {
+    if (((isrflags & USART_STS_IDLEFLG) != RESET) && ((cr1its & USART_STS_IDLEFLG) != RESET)) {
         if (s->port.idleCallback) {
             s->port.idleCallback();
         }
 
-        DDL_USART_ClearFlag_IDLE(USARTx);
+        // clear
+        (void) huart->Instance->STS;
+        (void) huart->Instance->DATA;
     }
 }
 

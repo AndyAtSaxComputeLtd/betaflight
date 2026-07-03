@@ -203,7 +203,7 @@ static void sendThrottleOrBatterySizeAsRpm(void)
         }
         data = throttleForRPM;
     } else {
-        data = (currentBatteryProfile->batteryCapacity / BLADE_NUMBER_DIVIDER);
+        data = (batteryConfig()->batteryCapacity / BLADE_NUMBER_DIVIDER);
     }
 #endif
 
@@ -420,7 +420,7 @@ static void sendAmperage(void)
 static void sendFuelLevel(void)
 {
     int16_t data;
-    if (currentBatteryProfile->batteryCapacity > 0) {
+    if (batteryConfig()->batteryCapacity > 0) {
         data = (uint16_t)calculateBatteryPercentageRemaining();
     } else {
         data = (uint16_t)constrain(getMAhDrawn(), 0, 0xFFFF);

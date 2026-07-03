@@ -49,6 +49,12 @@
 #include "io/serial_4way_stk500v2.h"
 #endif
 
+#if defined(USE_HAL_DRIVER)
+#define Bit_RESET GPIO_PIN_RESET
+#elif defined(AT32F435)
+#define Bit_RESET 0
+#endif
+
 #define USE_TXRX_LED
 
 #ifdef  USE_TXRX_LED
@@ -108,11 +114,11 @@ inline bool isMcuConnected(void)
 
 inline bool isEscHi(uint8_t selEsc)
 {
-    return (IORead(escHardware[selEsc].io) != GPIO_PIN_RESET);
+    return (IORead(escHardware[selEsc].io) != Bit_RESET);
 }
 inline bool isEscLo(uint8_t selEsc)
 {
-    return (IORead(escHardware[selEsc].io) == GPIO_PIN_RESET);
+    return (IORead(escHardware[selEsc].io) == Bit_RESET);
 }
 
 inline void setEscHi(uint8_t selEsc)
@@ -137,8 +143,9 @@ inline void setEscOutput(uint8_t selEsc)
 
 uint8_t esc4wayInit(void)
 {
+    motorShutdown();
     uint8_t escIndex = 0;
-    motorDisable();
+
     memset(&escHardware, 0, sizeof(escHardware));
     for (volatile uint8_t i = 0; i < MAX_SUPPORTED_MOTORS; i++) {
         if (motorIsMotorEnabled(i)) {
@@ -151,6 +158,7 @@ uint8_t esc4wayInit(void)
             }
         }
     }
+    motorDisable();
     escCount = escIndex;
     return escCount;
 }

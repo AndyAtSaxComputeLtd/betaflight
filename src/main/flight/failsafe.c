@@ -44,8 +44,6 @@
 
 #include "io/beeper.h"
 
-#include "msp/msp_serial.h"
-
 #include "rx/rx.h"
 
 #include "flight/pid.h"
@@ -250,8 +248,8 @@ FAST_CODE_NOINLINE void failsafeUpdateState(void)
         receivingRxData = false;
     }
 
-    // Beep RX lost whenever no RC data is received outside bench environment
-    if (!receivingRxData && !mspSerialIsConfiguratorActive()) {
+    // Beep RX lost whenever no RC data is received and the USB cable is not connected
+    if (!receivingRxData && !usbCableIsInserted()) {
         beeperMode = BEEPER_RX_LOST;
     }
 

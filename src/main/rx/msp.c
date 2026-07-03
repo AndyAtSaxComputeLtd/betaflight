@@ -28,7 +28,6 @@
 #include "common/utils.h"
 
 #include "drivers/io.h"
-#include "drivers/time.h"
 #include "pg/rx.h"
 #include "rx/rx.h"
 #include "rx/msp.h"
@@ -36,18 +35,6 @@
 static uint16_t mspFrame[MAX_SUPPORTED_RC_CHANNEL_COUNT];
 static bool rxMspFrameDone = false;
 static bool rxMspOverrideFrameDone = false;
-static bool rxMspRcFrameEverReceived = false;
-static timeMs_t lastRxMspRcFrameMs = 0;
-static uint8_t lastRxMspRcFrameChannelCount = 0;
-
-// Substitute MSP RC values into the override path only if a frame containing
-// the channel arrived within this window. Without this guard:
-//  - empty mspFrame[] (companion never sent, or stopped) would clamp masked
-//    channels to rx_min_usec the instant BOXMSPOVERRIDE activated;
-//  - a short MSP_SET_RAW_RC frame (e.g. AETR-only) would still leave any
-//    masked AUX channel reading from the zero-filled tail of mspFrame[].
-// 300 ms gives honest support for ~5 Hz MSP RC with timing margin.
-#define RX_MSP_RC_FRAME_FRESH_MS 300
 
 float rxMspReadRawRC(const rxRuntimeState_t *rxRuntimeState, uint8_t chan)
 {
@@ -71,30 +58,17 @@ void rxMspFrameReceive(const uint16_t *frame, int channelCount)
 
     rxMspFrameDone = true;
     rxMspOverrideFrameDone = true;
-    lastRxMspRcFrameMs = millis();
-    lastRxMspRcFrameChannelCount = channelCount;
-    rxMspRcFrameEverReceived = true;
-}
-
-bool rxMspIsRcChannelFresh(uint8_t chan)
-{
-    if (!rxMspRcFrameEverReceived) {
-        return false;
-    }
-    if (chan >= lastRxMspRcFrameChannelCount) {
-        return false;
-    }
-    return (millis() - lastRxMspRcFrameMs) <= RX_MSP_RC_FRAME_FRESH_MS;
 }
 
 static uint8_t rxMspFrameStatus(rxRuntimeState_t *rxRuntimeState)
 {
+    UNUSED(rxRuntimeState);
+
     if (!rxMspFrameDone) {
         return RX_FRAME_PENDING;
     }
 
     rxMspFrameDone = false;
-    rxRuntimeState->lastRcFrameTimeUs = micros();
     return RX_FRAME_COMPLETE;
 }
 

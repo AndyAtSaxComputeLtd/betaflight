@@ -34,13 +34,11 @@
 #include "drivers/time.h"
 #include "drivers/timer.h"
 
-#include "platform/timer.h"
-
 #include "drivers/motor_impl.h"
 
 static bool useContinuousUpdate = true;
 
-static void pwmOCConfig(timerResource_t *tim, uint8_t channel, uint16_t value, uint8_t output)
+static void pwmOCConfig(TIM_TypeDef *tim, uint8_t channel, uint16_t value, uint8_t output)
 {
 #if defined(USE_HAL_DRIVER)
     TIM_HandleTypeDef* Handle = timerFindTimerHandle(tim);
@@ -74,19 +72,19 @@ static void pwmOCConfig(timerResource_t *tim, uint8_t channel, uint16_t value, u
     }
     TIM_OCInitStructure.TIM_Pulse = value;
 
-    timerOCInit((TIM_TypeDef *)tim, channel, &TIM_OCInitStructure);
-    timerOCPreloadConfig((TIM_TypeDef *)tim, channel, TIM_OCPreload_Enable);
+    timerOCInit(tim, channel, &TIM_OCInitStructure);
+    timerOCPreloadConfig(tim, channel, TIM_OCPreload_Enable);
 #endif
 }
 
-void pwmOutputConfig(timerChannel_t *channel, const timerHardware_t *timerHardware, uint32_t hz, uint16_t period, uint16_t value, uint8_t inversion)
+void pwmOutConfig(timerChannel_t *channel, const timerHardware_t *timerHardware, uint32_t hz, uint16_t period, uint16_t value, uint8_t inversion)
 {
 #if defined(USE_HAL_DRIVER)
     TIM_HandleTypeDef* Handle = timerFindTimerHandle(timerHardware->tim);
     if (Handle == NULL) return;
 #endif
 
-    timerReconfigureTimeBase(timerHardware, period, hz);
+    configTimeBase(timerHardware->tim, period, hz);
     pwmOCConfig(timerHardware->tim,
         timerHardware->channel,
         value,
@@ -100,8 +98,8 @@ void pwmOutputConfig(timerChannel_t *channel, const timerHardware_t *timerHardwa
         HAL_TIM_PWM_Start(Handle, timerHardware->channel);
     HAL_TIM_Base_Start(Handle);
 #else
-    TIM_CtrlPWMOutputs((TIM_TypeDef *)timerHardware->tim, ENABLE);
-    TIM_Cmd((TIM_TypeDef *)timerHardware->tim, ENABLE);
+    TIM_CtrlPWMOutputs(timerHardware->tim, ENABLE);
+    TIM_Cmd(timerHardware->tim, ENABLE);
 #endif
 
     channel->ccr = timerChCCR(timerHardware);
@@ -109,11 +107,6 @@ void pwmOutputConfig(timerChannel_t *channel, const timerHardware_t *timerHardwa
     channel->tim = timerHardware->tim;
 
     *channel->ccr = 0;
-}
-
-void pwmWriteChannel(timerChannel_t *channel, uint32_t value)
-{
-    *channel->ccr = value;
 }
 
 static void pwmWriteStandard(uint8_t index, float value)
@@ -238,7 +231,7 @@ bool motorPwmDevInit(motorDevice_t *device, const motorDevConfig_t *motorConfig,
         // margin of safety is 4 periods when unsynced
         const unsigned pwmRateHz = useContinuousUpdate ? motorConfig->motorPwmRate : ceilf(1 / ((sMin + sLen) * 4));
 
-        const uint32_t clock = timerClock(timerHardware);
+        const uint32_t clock = timerClock(timerHardware->tim);
         /* used to find the desired timer frequency for max resolution */
         const unsigned prescaler = ((clock / pwmRateHz) + 0xffff) / 0x10000; /* rounding up */
         const uint32_t hz = clock / prescaler;
@@ -252,7 +245,7 @@ bool motorPwmDevInit(motorDevice_t *device, const motorDevConfig_t *motorConfig,
         pwmMotors[motorIndex].pulseScale = ((motorConfig->motorProtocol == MOTOR_PROTOCOL_BRUSHED) ? period : (sLen * hz)) / 1000.0f;
         pwmMotors[motorIndex].pulseOffset = (sMin * hz) - (pwmMotors[motorIndex].pulseScale * 1000);
 
-        pwmOutputConfig(&pwmMotors[motorIndex].channel, timerHardware, hz, period, idlePulse, motorConfig->motorInversion);
+        pwmOutConfig(&pwmMotors[motorIndex].channel, timerHardware, hz, period, idlePulse, motorConfig->motorInversion);
 
         bool timerAlreadyUsed = false;
         for (int i = 0; i < motorIndex; i++) {
@@ -305,7 +298,7 @@ void servoDevInit(const servoDevConfig_t *servoConfig)
 
         IOConfigGPIOAF(servos[servoIndex].io, IOCFG_AF_PP, timer->alternateFunction);
 
-        pwmOutputConfig(&servos[servoIndex].channel, timer, PWM_TIMER_1MHZ, PWM_TIMER_1MHZ / servoConfig->servoPwmRate, servoConfig->servoCenterPulse, 0);
+        pwmOutConfig(&servos[servoIndex].channel, timer, PWM_TIMER_1MHZ, PWM_TIMER_1MHZ / servoConfig->servoPwmRate, servoConfig->servoCenterPulse, 0);
         servos[servoIndex].enabled = true;
     }
 }

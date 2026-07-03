@@ -21,8 +21,8 @@
 
 #pragma once
 
-// pico sdk header includes
 #include "RP2350.h"
+
 #include "pico.h"
 #include "pico/stdlib.h"
 #include "hardware/dma.h"
@@ -30,12 +30,6 @@
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
-#include "pico_trace.h"
-
-// Revert MAX, MIN definitions because they are unsafe for general use (double evaluations).
-// Code that requires MAX, MIN should include common/maths.h
-#undef MAX
-#undef MIN
 
 #define NVIC_PriorityGroup_2         0x500
 #define PLATFORM_NO_LIBC             0
@@ -45,29 +39,40 @@
 
 typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionalState;
 
-#define I2C_INST(i2c)        ((i2c_inst_t *)(i2c))
+#define I2C_TypeDef          i2c_inst_t
+#define I2C_INST(i2c)        (i2c)
+
+#define GPIO_TypeDef         io_bank0_hw_t
+//#define GPIO_InitTypeDef
+#define TIM_TypeDef          void*
+//#define TIM_OCInitTypeDef
 
 #define DMA_TypeDef          void*
 #define DMA_InitTypeDef      dma_channel_config
 
 #define ADC_TypeDef          void*
 
-#define UART_INST(uart)      ((uart_inst_t *)(uart))
+#define USART_TypeDef        uart_inst_t
+#define UART_INST(uart)      (uart)
 
 #define TIM_OCInitTypeDef    void*
 #define TIM_ICInitTypeDef    void*
+//#define TIM_OCStructInit
+//#define TIM_Cmd
+//#define TIM_CtrlPWMOutputs
+//#define TIM_TimeBaseInit
+//#define TIM_ARRPreloadConfig
+//#define SystemCoreClock
+//#define EXTI_TypeDef
+//#define EXTI_InitTypeDef
 
-// SPI_TypeDef alias removed: use spiResource_t* in generic code, cast to SPI0_Type* in platform code.
+// We have to use SPI0_Type (or void) because config will pass in SPI0, SPI1,
+// which are defined in pico-sdk as SPI0_Type*.
 // SPI_INST converts to the correct type for use in pico-sdk functions.
+#define SPI_TypeDef          SPI0_Type
 #define SPI_INST(spi)        ((spi_inst_t *)(spi))
 
-// quadSpiResource_s: platform-specific definition of the opaque quadSpiResource_t.
-// PICO has no hardware QUADSPI peripheral; this is a placeholder struct.
-struct quadSpiResource_s
-{
-    void* test;
-};
-
+#define QUADSPI_TypeDef      void
 #define MAX_QUADSPI_PIN_SEL  1
 
 #define QUADSPI_TRAIT_CS_SOFTWARE       1
@@ -77,15 +82,7 @@ struct quadSpiResource_s
 #define DMA_DATA_ZERO_INIT
 #define DMA_DATA
 #define STATIC_DMA_DATA_AUTO            static
-
-#if PICO_COPY_TO_RAM == 0
-#define FAST_CODE                       __attribute__((section(".fastcode")))
-#else
-#define FAST_CODE
-#endif
-
-#define FAST_IRQ_HANDLER                FAST_CODE
-
+#define FAST_IRQ_HANDLER
 
 #define DEFAULT_CPU_OVERCLOCK           0
 
@@ -128,13 +125,6 @@ struct quadSpiResource_s
 #define SERIAL_UART_FIRST_INDEX     0
 #define SERIAL_PIOUART_FIRST_INDEX  0
 
-// This MCU names its bus peripherals from zero (UART0, PIOUART0, SPI0, I2C0). Opt
-// the CLI `resource` command into hardware-instance ordinals so each index matches
-// the peripheral name: the bus peripherals here are 0-based (e.g. `resource
-// SERIAL_RX 1` is UART1), while logical resources (motor 1, servo 1) and sensors
-// (gyro 1) stay 1-based. See resourceDisplayBase() in cli.c.
-#define USE_RESOURCE_INDEX_FROM_ZERO
-
 extern uint32_t systemUniqueId[3];
 
 // PICOs have an 8 byte unique identifier.
@@ -145,7 +135,6 @@ extern uint32_t systemUniqueId[3];
 #define UART_TX_BUFFER_ATTRIBUTE
 #define UART_RX_BUFFER_ATTRIBUTE
 
-#define UART_TRAIT_BIDIR_PP_PREPEND 1
 #define SERIAL_TRAIT_PIN_CONFIG 1
 
 #define xDMA_GetCurrDataCounter(dma_resource) (((dma_channel_hw_t *)(dma_resource))->transfer_count)
@@ -156,13 +145,3 @@ extern uint32_t systemUniqueId[3];
 // 100 = 1.00x (100%) scaling; override per target/board to match its VBAT divider
 #define DEFAULT_VOLTAGE_METER_SCALE   100
 #endif
-
-#define USE_RPM_FILTER
-#define USE_DYN_IDLE
-#define USE_DYN_NOTCH_FILTER
-
-// NVIC priority utility macros
-#define NVIC_PRIORITY_GROUPING NVIC_PriorityGroup_2
-#define NVIC_BUILD_PRIORITY(base,sub) (((((base)<<(4-(7-(NVIC_PRIORITY_GROUPING>>8))))|((sub)&(0x0f>>(7-(NVIC_PRIORITY_GROUPING>>8)))))<<4)&0xf0)
-#define NVIC_PRIORITY_BASE(prio) (((prio)>>(4-(7-(NVIC_PRIORITY_GROUPING>>8))))>>4)
-#define NVIC_PRIORITY_SUB(prio) (((prio)>>4)&(0x0f>>(7-(NVIC_PRIORITY_GROUPING>>8))))

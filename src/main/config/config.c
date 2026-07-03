@@ -80,9 +80,6 @@
 #include "pg/rx_spi.h"
 #include "pg/sdcard.h"
 #include "pg/vtx_table.h"
-#if ENABLE_FLIGHT_PLAN
-#include "pg/flight_plan.h"
-#endif
 
 #include "rx/rx.h"
 #include "rx/rx_spi.h"
@@ -108,7 +105,7 @@ pidProfile_t *currentPidProfile;
 #define RX_SPI_DEFAULT_PROTOCOL 0
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(systemConfig_t, systemConfig, PG_SYSTEM_CONFIG, 4);
+PG_REGISTER_WITH_RESET_TEMPLATE(systemConfig_t, systemConfig, PG_SYSTEM_CONFIG, 3);
 
 PG_RESET_TEMPLATE(systemConfig_t, systemConfig,
     .pidProfileIndex = 0,
@@ -122,7 +119,6 @@ PG_RESET_TEMPLATE(systemConfig_t, systemConfig,
     .hseMhz = SYSTEM_HSE_MHZ,  // Only used for F4 and G4 targets
     .configurationState = CONFIGURATION_STATE_UNCONFIGURED,
     .enableStickArming = false,
-    .activeBatteryProfile = 0,
 );
 
 bool isEepromWriteInProgress(void)
@@ -145,12 +141,6 @@ uint8_t getCurrentControlRateProfileIndex(void)
     return systemConfig()->activeRateProfile;
 }
 
-// Returns the active battery profile index.
-uint8_t getCurrentBatteryProfileIndex(void)
-{
-    return systemConfig()->activeBatteryProfile;
-}
-
 void resetConfig(void)
 {
     pgResetAll();
@@ -164,7 +154,6 @@ static void activateConfig(void)
 {
     loadPidProfile();
     loadControlRateProfile();
-    loadBatteryProfile();
 
     initRcProcessing();
 
@@ -233,14 +222,17 @@ static void validateAndFixConfig(void)
 
 #if defined(USE_GPS)
     const serialPortConfig_t *gpsSerial = findSerialPortConfig(FUNCTION_GPS);
-    if (GPS_PROVIDER_REQUIRES_NO_SERIAL_PORT(gpsConfig()->provider) && gpsSerial) {
+    if (gpsConfig()->provider == GPS_MSP && gpsSerial) {
         serialRemovePort(gpsSerial->identifier);
     }
-
-    if (!GPS_PROVIDER_REQUIRES_NO_SERIAL_PORT(gpsConfig()->provider) && !gpsSerial) {
+#endif
+    if (
+#if defined(USE_GPS)
+        gpsConfig()->provider != GPS_MSP && !gpsSerial &&
+#endif
+        true) {
         featureDisableImmediate(FEATURE_GPS);
     }
-#endif
 
     for (unsigned i = 0; i < PID_PROFILE_COUNT; i++) {
         // Fix filter settings to handle cases where an older configurator was used that
@@ -314,46 +306,31 @@ static void validateAndFixConfig(void)
     }
 #endif // USE_ACC
 
-    bool hasConfiguredRxFeature =
-        featureIsConfigured(FEATURE_RX_PARALLEL_PWM) ||
-        featureIsConfigured(FEATURE_RX_PPM) ||
-        featureIsConfigured(FEATURE_RX_SERIAL) ||
-        featureIsConfigured(FEATURE_RX_MSP) ||
-        featureIsConfigured(FEATURE_RX_SPI);
-#if ENABLE_RX_UDP
-    hasConfiguredRxFeature = hasConfiguredRxFeature || featureIsConfigured(FEATURE_RX_UDP);
-#endif
-    if (!hasConfiguredRxFeature) {
+    if (!(featureIsConfigured(FEATURE_RX_PARALLEL_PWM) || featureIsConfigured(FEATURE_RX_PPM) || featureIsConfigured(FEATURE_RX_SERIAL) || featureIsConfigured(FEATURE_RX_MSP) || featureIsConfigured(FEATURE_RX_SPI))) {
         featureEnableImmediate(DEFAULT_RX_FEATURE);
     }
 
     if (featureIsConfigured(FEATURE_RX_PPM)) {
-        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_SPI | FEATURE_RX_UDP);
+        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_SPI);
     }
 
     if (featureIsConfigured(FEATURE_RX_MSP)) {
-        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_UDP);
+        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_SPI);
     }
 
     if (featureIsConfigured(FEATURE_RX_SERIAL)) {
-        featureDisableImmediate(FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_UDP);
+        featureDisableImmediate(FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI);
     }
 
 #ifdef USE_RX_SPI
     if (featureIsConfigured(FEATURE_RX_SPI)) {
-        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_MSP | FEATURE_RX_UDP);
+        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_MSP);
     }
 #endif // USE_RX_SPI
 
     if (featureIsConfigured(FEATURE_RX_PARALLEL_PWM)) {
-        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_UDP);
+        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI);
     }
-
-#if ENABLE_RX_UDP
-    if (featureIsConfigured(FEATURE_RX_UDP)) {
-        featureDisableImmediate(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_MSP | FEATURE_RX_SPI);
-    }
-#endif // ENABLE_RX_UDP
 
 #if defined(USE_ADC)
     if (featureIsConfigured(FEATURE_RSSI_ADC)) {
@@ -542,25 +519,11 @@ static void validateAndFixConfig(void)
 
     validateAndfixMotorOutputReordering(motorConfigMutable()->dev.motorOutputReordering, MAX_SUPPORTED_MOTORS);
 
-    // validate battery profile voltages and field bounds, reset to defaults if invalid
-    for (unsigned i = 0; i < BATTERY_PROFILE_COUNT; i++) {
-        const batteryProfile_t *profile = batteryProfiles(i);
-        if (profile->vbatmincellvoltage >= profile->vbatmaxcellvoltage
-            || profile->vbatwarningcellvoltage < profile->vbatmincellvoltage
-            || profile->vbatwarningcellvoltage > profile->vbatmaxcellvoltage
-            || profile->vbatfullcellvoltage < profile->vbatwarningcellvoltage
-            || profile->vbatfullcellvoltage > profile->vbatmaxcellvoltage) {
-            batteryProfilesMutable(i)->vbatmincellvoltage = VBAT_CELL_VOLTAGE_DEFAULT_MIN;
-            batteryProfilesMutable(i)->vbatmaxcellvoltage = VBAT_CELL_VOLTAGE_DEFAULT_MAX;
-            batteryProfilesMutable(i)->vbatwarningcellvoltage = 350;
-            batteryProfilesMutable(i)->vbatfullcellvoltage = 410;
-        }
-        if (profile->forceBatteryCellCount > 24) {
-            batteryProfilesMutable(i)->forceBatteryCellCount = 0;
-        }
-        if (profile->consumptionWarningPercentage > 100) {
-            batteryProfilesMutable(i)->consumptionWarningPercentage = 10;
-        }
+    // validate that the minimum battery cell voltage is less than the maximum cell voltage
+    // reset to defaults if not
+    if (batteryConfig()->vbatmincellvoltage >=  batteryConfig()->vbatmaxcellvoltage) {
+        batteryConfigMutable()->vbatmincellvoltage = VBAT_CELL_VOLTAGE_DEFAULT_MIN;
+        batteryConfigMutable()->vbatmaxcellvoltage = VBAT_CELL_VOLTAGE_DEFAULT_MAX;
     }
 
 #ifdef USE_MSP_DISPLAYPORT
@@ -694,17 +657,6 @@ void validateAndFixGyroConfig(void)
         systemConfigMutable()->pidProfileIndex = 0;
     }
     loadPidProfile();
-
-    if (systemConfig()->activeBatteryProfile >= BATTERY_PROFILE_COUNT) {
-        systemConfigMutable()->activeBatteryProfile = 0;
-    }
-    loadBatteryProfile();
-
-#if ENABLE_FLIGHT_PLAN
-    if (flightPlanConfigMutable()->waypointCount > MAX_WAYPOINTS) {
-        flightPlanConfigMutable()->waypointCount = 0;
-    }
-#endif
 }
 
 #ifdef USE_BLACKBOX

@@ -118,9 +118,9 @@ static uint8_t skippedOSDAttempts = 0;
 #endif
 
 #if defined(USE_LATE_TASK_STATISTICS)
-static uint32_t lateTaskCount = 0;
+static int16_t lateTaskCount = 0;
 static uint32_t lateTaskTotal = 0;
-static uint32_t taskCount = 0;
+static int16_t taskCount = 0;
 static uint32_t lateTaskPercentage = 0;
 static uint32_t nextTimingCycles;
 static int32_t gyroCyclesNow;
@@ -214,7 +214,7 @@ void taskSystemLoad(timeUs_t currentTimeUs)
         schedulerIgnoreTaskExecTime();
     }
 
-#if ENABLE_SIMULATOR
+#if defined(SIMULATOR_BUILD)
     averageSystemLoadPercent = 0;
 #endif
 }
@@ -228,10 +228,10 @@ uint32_t getCpuPercentageLate(void)
 #endif
 }
 
-static timeUs_t checkFuncMaxExecutionTimeUs;
-static timeUs_t checkFuncTotalExecutionTimeUs;
-static timeUs_t checkFuncMovingSumExecutionTimeUs;
-static timeUs_t checkFuncMovingSumDeltaTimeUs;
+timeUs_t checkFuncMaxExecutionTimeUs;
+timeUs_t checkFuncTotalExecutionTimeUs;
+timeUs_t checkFuncMovingSumExecutionTimeUs;
+timeUs_t checkFuncMovingSumDeltaTimeUs;
 
 void getCheckFuncInfo(cfCheckFuncInfo_t *checkFuncInfo)
 {
@@ -243,24 +243,21 @@ void getCheckFuncInfo(cfCheckFuncInfo_t *checkFuncInfo)
 
 void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo)
 {
-    task_t *taskPtr = getTask(taskId);
-    taskInfo->isEnabled = queueContains(taskPtr);
-    taskInfo->desiredPeriodUs = taskPtr->attribute->desiredPeriodUs;
-    taskInfo->staticPriority = taskPtr->attribute->staticPriority;
-    taskInfo->taskName = taskPtr->attribute->taskName;
-    taskInfo->subTaskName = taskPtr->attribute->subTaskName;
-    taskInfo->maxExecutionTimeUs = taskPtr->maxExecutionTimeUs;
-    taskInfo->totalExecutionTimeUs = taskPtr->totalExecutionTimeUs;
-    taskInfo->averageExecutionTime10thUs = taskPtr->movingSumExecutionTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
-    taskInfo->averageDeltaTime10thUs = taskPtr->movingSumDeltaTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
-    taskInfo->latestDeltaTimeUs = taskPtr->taskLatestDeltaTimeUs;
-    taskInfo->movingAverageLoad10thPct =  taskPtr->movingSumDeltaTime10thUs == 0 ? 0 : (taskPtr->movingSumStatesExecTime10thUs * 1000) / taskPtr->movingSumDeltaTime10thUs;
-    taskInfo->maxLoad10thPct = taskInfo->averageDeltaTime10thUs == 0 ? 0 : (taskPtr->maxStatesExecTimeUs * 10000) /  taskInfo->averageDeltaTime10thUs;
-
+    taskInfo->isEnabled = queueContains(getTask(taskId));
+    taskInfo->desiredPeriodUs = getTask(taskId)->attribute->desiredPeriodUs;
+    taskInfo->staticPriority = getTask(taskId)->attribute->staticPriority;
+    taskInfo->taskName = getTask(taskId)->attribute->taskName;
+    taskInfo->subTaskName = getTask(taskId)->attribute->subTaskName;
+    taskInfo->maxExecutionTimeUs = getTask(taskId)->maxExecutionTimeUs;
+    taskInfo->totalExecutionTimeUs = getTask(taskId)->totalExecutionTimeUs;
+    taskInfo->averageExecutionTime10thUs = getTask(taskId)->movingSumExecutionTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
+    taskInfo->averageDeltaTime10thUs = getTask(taskId)->movingSumDeltaTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
+    taskInfo->latestDeltaTimeUs = getTask(taskId)->taskLatestDeltaTimeUs;
+    taskInfo->movingAverageCycleTimeUs = getTask(taskId)->movingAverageCycleTimeUs;
 #if defined(USE_LATE_TASK_STATISTICS)
-    taskInfo->lateCount = taskPtr->lateCount;
-    taskInfo->runCount = taskPtr->runCount;
-    taskInfo->execTime = taskPtr->execTime;
+    taskInfo->lateCount = getTask(taskId)->lateCount;
+    taskInfo->runCount = getTask(taskId)->runCount;
+    taskInfo->execTime = getTask(taskId)->execTime;
 #endif
 }
 
@@ -337,13 +334,11 @@ void schedulerResetTaskStatistics(taskId_e taskId)
         currentTask->movingSumDeltaTime10thUs = 0;
         currentTask->totalExecutionTimeUs = 0;
         currentTask->maxExecutionTimeUs = 0;
-        currentTask->maxStatesExecTimeUs = 0;
     } else if (taskId < TASK_COUNT) {
         getTask(taskId)->anticipatedExecutionTime = 0;
         getTask(taskId)->movingSumDeltaTime10thUs = 0;
         getTask(taskId)->totalExecutionTimeUs = 0;
         getTask(taskId)->maxExecutionTimeUs = 0;
-        getTask(taskId)->maxStatesExecTimeUs = 0;
     }
 }
 
@@ -351,11 +346,9 @@ void schedulerResetTaskMaxExecutionTime(taskId_e taskId)
 {
     if (taskId == TASK_SELF) {
         currentTask->maxExecutionTimeUs = 0;
-        currentTask->maxStatesExecTimeUs = 0;
     } else if (taskId < TASK_COUNT) {
         task_t *task = getTask(taskId);
         task->maxExecutionTimeUs = 0;
-        task->maxStatesExecTimeUs = 0;
 #if defined(USE_LATE_TASK_STATISTICS)
         task->lateCount = 0;
         task->runCount = 0;
@@ -419,6 +412,7 @@ FAST_CODE timeUs_t schedulerExecuteTask(task_t *selectedTask, timeUs_t currentTi
         ignoreCurrentTaskExecRate = false;
         ignoreCurrentTaskExecTime = false;
         taskNextStateTime = -1;
+        float period = currentTimeUs - selectedTask->lastExecutedAtUs;
         selectedTask->lastExecutedAtUs = currentTimeUs;
         selectedTask->lastDesiredAt += selectedTask->attribute->desiredPeriodUs;
         selectedTask->dynamicPriority = 0;
@@ -431,20 +425,12 @@ FAST_CODE timeUs_t schedulerExecuteTask(task_t *selectedTask, timeUs_t currentTi
         selectedTask->attribute->taskFunc(currentTimeBeforeTaskCallUs);
         taskExecutionTimeUs = micros() - currentTimeBeforeTaskCallUs;
         taskTotalExecutionTime += taskExecutionTimeUs;
-        if (!ignoreCurrentTaskExecTime) {
-            selectedTask->execTimeSinceStatesTime += taskExecutionTimeUs;
-        }
-
         selectedTask->movingSumExecutionTime10thUs += (taskExecutionTimeUs * 10) - selectedTask->movingSumExecutionTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
         if (!ignoreCurrentTaskExecRate) {
             // Record task execution rate and max execution time
-            uint32_t deltaStateTime = cmpTimeUs(currentTimeUs, selectedTask->lastStatsAtUs);
-            selectedTask->taskLatestDeltaTimeUs = deltaStateTime;
+            selectedTask->taskLatestDeltaTimeUs = cmpTimeUs(currentTimeUs, selectedTask->lastStatsAtUs);
             selectedTask->movingSumDeltaTime10thUs += (selectedTask->taskLatestDeltaTimeUs * 10) - selectedTask->movingSumDeltaTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
             selectedTask->lastStatsAtUs = currentTimeUs;
-            selectedTask->movingSumStatesExecTime10thUs += (selectedTask->execTimeSinceStatesTime * 10) - selectedTask->movingSumStatesExecTime10thUs / TASK_STATS_MOVING_SUM_COUNT;
-            selectedTask->maxStatesExecTimeUs = MAX(selectedTask->maxStatesExecTimeUs, selectedTask->execTimeSinceStatesTime);
-            selectedTask->execTimeSinceStatesTime = 0;
         }
 
         // Update estimate of expected task duration
@@ -464,6 +450,7 @@ FAST_CODE timeUs_t schedulerExecuteTask(task_t *selectedTask, timeUs_t currentTi
         }
 
         selectedTask->totalExecutionTimeUs += taskExecutionTimeUs;   // time consumed by scheduler + task
+        selectedTask->movingAverageCycleTimeUs += 0.05f * (period - selectedTask->movingAverageCycleTimeUs);
 #if defined(USE_LATE_TASK_STATISTICS)
         selectedTask->runCount++;
 

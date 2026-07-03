@@ -28,10 +28,6 @@
 
 #include "platform.h"
 
-#ifndef UART_TRAIT_BIDIR_PP_PREPEND
-#define UART_TRAIT_BIDIR_PP_PREPEND 0
-#endif
-
 #if defined(USE_VTX_SMARTAUDIO) && defined(USE_VTX_CONTROL)
 
 #include "build/debug.h"
@@ -503,11 +499,11 @@ static void saSendFrame(uint8_t *buf, int len)
             break;
         case SERIALTYPE_UART:
         case SERIALTYPE_PIOUART:
-        case SERIALTYPE_LPUART:
-#if UART_TRAIT_BIDIR_PP_PREPEND
-            prepend00 = true;
-#else
+        case SERIALTYPE_LPUART: // decide HW uarts by MCU type
+#ifdef AT32F4
             prepend00 = false;
+#else
+            prepend00 = true;
 #endif
             break;
         default:
@@ -669,6 +665,13 @@ void saSetPitFreq(uint16_t freq)
 {
     saSetFreq(freq | SA_FREQ_SETPIT);
 }
+
+#if 0
+static void saGetPitFreq(void)
+{
+    saDoDevSetFreq(SA_FREQ_GETPIT);
+}
+#endif
 
 void saSetMode(int mode)
 {

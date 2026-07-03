@@ -37,18 +37,13 @@
 
 #include "common/maths.h"
 #include "drivers/bus.h"
-#include "drivers/bus_spi_types.h"
 #include "drivers/bus_spi.h"
 #include "drivers/bus_spi_impl.h"
 #include "drivers/exti.h"
 #include "drivers/io.h"
 #include "drivers/io_def.h"
 #include "drivers/io_impl.h"
-#include "drivers/dma.h"
-#include "drivers/dma_impl.h"
 #include "drivers/nvic.h"
-
-#include "platform/dma.h"
 
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
@@ -64,7 +59,7 @@
 const spiHardware_t spiHardware[] = {
     {
         .device = SPIDEV_0,
-        .reg = (spiResource_t *)SPI0,
+        .reg = SPI0,
         .sckPins = {
             { DEFIO_TAG_E(PA2) },
             { DEFIO_TAG_E(PA6) },
@@ -98,7 +93,7 @@ const spiHardware_t spiHardware[] = {
     },
     {
         .device = SPIDEV_1,
-        .reg = (spiResource_t *)SPI1,
+        .reg = SPI1,
         .sckPins = {
             { DEFIO_TAG_E(PA10) },
             { DEFIO_TAG_E(PA14) },
@@ -274,6 +269,7 @@ FAST_IRQ_HANDLER static void spiRxIrqHandler(dmaChannelDescriptor_t* descriptor)
     spiIrqHandler(dev);
 }
 
+extern dmaChannelDescriptor_t dmaDescriptors[];
 
 void spiInitBusDMA(void)
 {
@@ -328,7 +324,7 @@ void spiInternalResetStream(dmaChannelDescriptor_t *descriptor)
     UNUSED(descriptor);
 }
 
-bool spiInternalReadWriteBufPolled(spiResource_t *instance, const uint8_t *txData, uint8_t *rxData, int len)
+bool spiInternalReadWriteBufPolled(SPI_TypeDef *instance, const uint8_t *txData, uint8_t *rxData, int len)
 {
     // TODO optimise with 16-bit transfers as per stm bus_spi_ll code
     int bytesProcessed = 0;
@@ -417,7 +413,7 @@ void spiInternalStartDMA(const extDevice_t *dev)
 void spiSequenceStart(const extDevice_t *dev)
 {
     busDevice_t *bus = dev->bus;
-    spiResource_t *instance = bus->busType_u.spi.instance;
+    SPI_TypeDef *instance = bus->busType_u.spi.instance;
     spiDevice_t *spi = &spiDevice[spiDeviceByInstance(instance)];
     bool dmaSafe = dev->useDMA;
 #if TESTING_NO_DMA

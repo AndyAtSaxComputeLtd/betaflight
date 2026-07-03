@@ -66,12 +66,6 @@ atomic_unittest_SRC := \
 		$(USER_DIR)/build/atomic.c \
 		$(TEST_DIR)/atomic_unittest_c.c
 
-compass_ist8310_unittest_SRC := \
-		$(USER_DIR)/drivers/compass/compass_ist8310.c
-
-compass_ist8310_unittest_DEFINES := \
-                USE_MAG_IST8310=
-
 baro_bmp085_unittest_SRC := \
 		$(USER_DIR)/drivers/barometer/barometer_bmp085.c
 
@@ -101,17 +95,6 @@ baro_ms5611_unittest_DEFINES := \
                 USE_BARO_MS5611= \
                 USE_BARO_SPI_MS5611=
 
-accgyro_spi_icm426xx_unittest_SRC := \
-		$(USER_DIR)/drivers/accgyro/accgyro_spi_icm426xx.c
-
-accgyro_spi_icm426xx_unittest_DEFINES := \
-                USE_GYRO_SPI_ICM42605= \
-                USE_ACCGYRO_ICM42622P= \
-                USE_ACCGYRO_ICM42686P= \
-                USE_GYRO_SPI_ICM42688P= \
-                USE_ACCGYRO_IIM42652= \
-                USE_ACCGYRO_IIM42653=
-
 # This test is disabled due to build errors.
 # Its source code is archived in unit/battery_unittest.cc.txt
 #
@@ -119,13 +102,6 @@ accgyro_spi_icm426xx_unittest_DEFINES := \
 #		$(USER_DIR)/sensors/battery.c \
 #		$(USER_DIR)/common/maths.c
 
-battery_profile_unittest_SRC := \
-		$(USER_DIR)/sensors/battery.c \
-		$(USER_DIR)/common/maths.c \
-		$(USER_DIR)/common/filter.c \
-		$(USER_DIR)/common/crc.c \
-		$(USER_DIR)/common/streambuf.c \
-		$(USER_DIR)/pg/pg.c
 
 blackbox_unittest_SRC :=  \
 		$(USER_DIR)/blackbox/blackbox.c \
@@ -238,15 +214,6 @@ motor_output_unittest_SRC := \
 motor_output_unittest_DEFINES := \
 		USE_DSHOT=
 
-msp_serial_unittest_SRC := \
-		$(USER_DIR)/msp/msp_serial.c \
-		$(USER_DIR)/common/crc.c \
-		$(USER_DIR)/common/streambuf.c
-
-msp_serial_unittest_DEFINES := \
-		USE_CLI= \
-		USE_MSP_DISPLAYPORT=
-
 osd_unittest_SRC := \
 		$(USER_DIR)/osd/osd.c \
 		$(USER_DIR)/osd/osd_elements.c \
@@ -307,8 +274,8 @@ rc_controls_unittest_SRC := \
 		$(USER_DIR)/common/maths.c \
 		$(USER_DIR)/common/streambuf.c \
 		$(USER_DIR)/fc/rc_adjustments.c \
-		$(USER_DIR)/fc/rc_modes.c \
-		$(USER_DIR)/config/simplified_tuning.c
+		$(USER_DIR)/fc/rc_modes.c
+
 
 rx_crsf_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
@@ -322,14 +289,6 @@ rx_crsf_unittest_SRC := \
 
 rx_ibus_unittest_SRC := \
 		$(USER_DIR)/rx/ibus.c
-
-
-rx_msp_override_unittest_SRC := \
-		$(USER_DIR)/rx/msp.c
-
-rx_msp_override_unittest_DEFINES := \
-		USE_RX_MSP= \
-		USE_RX_MSP_OVERRIDE=
 
 
 rx_ranges_unittest_SRC := \
@@ -379,12 +338,6 @@ sensor_gyro_unittest_SRC := \
 		$(USER_DIR)/drivers/accgyro/gyro_sync.c \
 		$(USER_DIR)/pg/pg.c \
 		$(USER_DIR)/pg/gyrodev.c
-
-sitl_gyro_unittest_SRC := \
-		$(TEST_DIR)/sitl_gyro_unittest_c.c
-
-sitl_gyro_unittest_INCLUDE_DIRS := \
-		$(ROOT)/src/platform/SIMULATOR
 
 telemetry_crsf_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
@@ -439,14 +392,6 @@ transponder_ir_unittest_SRC := \
 ws2811_unittest_SRC := \
 		$(USER_DIR)/drivers/light_ws2811strip.c
 
-
-.PHONY: check-pg-ids
-check-pg-ids:
-	@pg=$(USER_DIR)/pg/pg_ids.h; \
-	if [ ! -f "$$pg" ]; then echo "pg_ids.h not found at $$pg"; exit 1; fi; \
-	awk -f $(TEST_DIR)/check_pg_ids.awk $$pg
-
-
 huffman_unittest_SRC := \
 		$(USER_DIR)/common/huffman.c \
 		$(USER_DIR)/common/huffman_table.c
@@ -478,48 +423,11 @@ pid_unittest_SRC :=  \
 pid_unittest_DEFINES := \
 		USE_ITERM_RELAX= \
 		USE_RC_SMOOTHING_FILTER= \
+		USE_ABSOLUTE_CONTROL= \
 		USE_LAUNCH_CONTROL= \
 		USE_FEEDFORWARD= \
 		USE_ADVANCED_TPA= \
 
-position_rescue_geometry_unittest_SRC := \
-		$(USER_DIR)/common/maths.c
-
-
-poshold_unittest_SRC := \
-		$(USER_DIR)/flight/autopilot_multirotor.c \
-		$(USER_DIR)/common/maths.c \
-		$(USER_DIR)/common/vector.c \
-		$(USER_DIR)/common/filter.c \
-		$(USER_DIR)/pg/rx.c
-
-position_estimator_unittest_SRC := \
-		$(USER_DIR)/flight/position_estimator.c \
-		$(USER_DIR)/flight/position_filter.c \
-		$(USER_DIR)/common/maths.c \
-		$(USER_DIR)/common/vector.c
-
-position_estimator_unittest_DEFINES := \
-		USE_GPS= \
-		USE_BARO= \
-		USE_RANGEFINDER=
-
-position_nav_unittest_SRC := \
-		$(USER_DIR)/flight/position_nav.c \
-		$(USER_DIR)/common/maths.c \
-		$(USER_DIR)/common/vector.c
-
-flight_plan_nav_unittest_SRC := \
-		$(USER_DIR)/flight/flight_plan_nav.c \
-		$(USER_DIR)/pg/autopilot.c \
-		$(USER_DIR)/pg/flight_plan.c \
-		$(USER_DIR)/common/maths.c \
-		$(USER_DIR)/common/vector.c
-
-flight_plan_nav_unittest_DEFINES := \
-		USE_GPS= \
-		USE_FLIGHT_PLAN= \
-		ENABLE_FLIGHT_PLAN=1
 rcdevice_unittest_DEFINES := \
 		USE_RCDEVICE=
 
@@ -558,19 +466,6 @@ rx_spi_expresslrs_unittest_DEFINES := \
 		USE_RX_EXPRESSLRS= \
 		USE_RX_SX1280= \
 		USE_RX_SX127X= \
-
-rx_spi_expresslrs_v4_unittest_SRC := \
-        $(USER_DIR)/pg/rx_spi_expresslrs.c \
-		$(USER_DIR)/rx/expresslrs_common.c \
-		$(USER_DIR)/rx/expresslrs.c \
-		$(USER_DIR)/build/atomic.c \
-
-rx_spi_expresslrs_v4_unittest_DEFINES := \
-		USE_RX_SPI= \
-		USE_RX_EXPRESSLRS= \
-		USE_RX_SX1280= \
-		USE_RX_SX127X= \
-		USE_ELRSV4= \
 
 rx_spi_expresslrs_telemetry_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
@@ -647,7 +542,7 @@ ifeq ($(shell $(CC) -v 2>&1 | grep -q "clang version" && echo "clang"),clang)
 # Please revisit versions when new clang version arrive. Supported versions: { Linux / OSX: 7 - 18 }
 CC_VERSION_MAJOR := $(firstword $(subst ., ,$(CC_VERSION)))
 CC_VERSION_CHECK_MIN := 7
-CC_VERSION_CHECK_MAX := 21
+CC_VERSION_CHECK_MAX := 18
 
 # c99-designator is fine, code is not expected to be clean C++
 COMMON_FLAGS += -Wno-c99-designator
@@ -659,10 +554,11 @@ ifeq ($(shell expr $(CC_VERSION_MAJOR) \< $(CC_VERSION_CHECK_MIN) \| $(CC_VERSIO
 $(error $(CC) $(CC_VERSION) is not supported. The officially supported version of clang is 'clang-18'. If this is not found, 'clang' is used as a fallback. The version of the compiler must be between $(CC_VERSION_CHECK_MIN) and $(CC_VERSION_CHECK_MAX).)
 endif
 
-ifndef CYGWIN
-ifeq ($(OSFAMILY), macosx)
 COMMON_FLAGS += -fblocks
-endif
+ifndef CYGWIN
+ifneq ($(OSFAMILY), macosx)
+LDFLAGS	     += -lBlocksRuntime
+endif # !macosx
 endif # !CYGWIN
 
 else ifeq ($(shell $(CC) -v 2>&1 | grep -q "gcc version" && echo "gcc"),gcc)
@@ -736,7 +632,7 @@ include $(MAKE_SCRIPT_DIR)/build_verbosity.mk
 # House-keeping build targets.
 
 ## test        : Build and run the non target specific Unit Tests (default goal)
-test: check-pg-ids $(TESTS:%=test_%)
+test: $(TESTS:%=test_%)
 
 ## test-all : Build and run all Unit Tests
 test-all: $(TESTS_ALL:%=test_%)

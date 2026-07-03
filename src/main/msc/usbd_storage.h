@@ -22,17 +22,37 @@
 
 #pragma once
 
-#include "platform/usb_msc_storage.h"
+#ifdef USE_HAL_DRIVER
+#include "usbd_msc.h"
+#else
+#include "usbd_msc_mem.h"
+#if !defined(AT32F435) && !defined(PICO)
+#include "usbd_msc_core.h"
+#endif
+#endif
 
 #include "common/time.h"
 
-extern USBD_MSC_StorageType *USBD_STORAGE_fops;
+#ifdef USE_HAL_DRIVER
+extern USBD_StorageTypeDef *USBD_STORAGE_fops;
 #ifdef USE_SDCARD_SDIO
-extern USBD_MSC_StorageType USBD_MSC_MICRO_SDIO_fops;
+extern USBD_StorageTypeDef USBD_MSC_MICRO_SDIO_fops;
 #endif
 #ifdef USE_SDCARD_SPI
-extern USBD_MSC_StorageType USBD_MSC_MICRO_SD_SPI_fops;
+extern USBD_StorageTypeDef USBD_MSC_MICRO_SD_SPI_fops;
 #endif
 #ifdef USE_FLASHFS
-extern USBD_MSC_StorageType USBD_MSC_EMFAT_fops;
+extern USBD_StorageTypeDef USBD_MSC_EMFAT_fops;
 #endif
+#else // USE_HAL_DRIVER
+extern USBD_STORAGE_cb_TypeDef *USBD_STORAGE_fops;
+#ifdef USE_SDCARD_SDIO
+extern USBD_STORAGE_cb_TypeDef USBD_MSC_MICRO_SDIO_fops;
+#endif
+#ifdef USE_SDCARD_SPI
+extern USBD_STORAGE_cb_TypeDef USBD_MSC_MICRO_SD_SPI_fops;
+#endif
+#ifdef USE_FLASHFS
+extern USBD_STORAGE_cb_TypeDef USBD_MSC_EMFAT_fops;
+#endif
+#endif // USE_HAL_DRIVER

@@ -23,6 +23,7 @@
 #include "pg/pg_ids.h"
 
 #include "drivers/io.h"
+#include "drivers/io_impl.h"
 
 #include "light_led.h"
 

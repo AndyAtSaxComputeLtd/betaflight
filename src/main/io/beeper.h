@@ -29,7 +29,6 @@
 #define DSHOT_BEACON_GUARD_DELAY_US 1200000  // Time to separate DShot beacon and arming/disarming events
                                              // to prevent interference with motor direction commands
 #define DSHOT_BEACON_MODE_INTERVAL_US     450000  // at least 450ms between successive DShot beacon iterations to allow time for ESC to play tone
-#define BEACON_MAX_AGE_US                 60000000 // Maximum age for beacon timestamp clamping (60 seconds)
 #endif
 
 typedef enum {
@@ -107,10 +106,6 @@ STATIC_ASSERT(BEEPER_ALL < sizeof(uint32_t) * 8, "BEEPER bits exhausted");
 #else
 #define DEFAULT_DSHOT_BEACON_OFF_FLAGS DSHOT_BEACON_ALLOWED_MODES
 #endif // USE_RACE_PRO
-
-#ifndef DEFAULT_BEEPER_OFF_FLAGS
-#define DEFAULT_BEEPER_OFF_FLAGS (0)
-#endif
 
 void beeper(beeperMode_e mode);
 void beeperSilence(void);

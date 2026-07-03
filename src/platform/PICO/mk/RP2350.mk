@@ -7,10 +7,6 @@
 # PICO_TRACE = 1
 DEFAULT_OUTPUT := uf2
 
-# Auto-hydrate pico-sdk submodule when building PICO targets
-PLATFORM_SDK := pico_sdk
-PLATFORM_SDK_STAMP := $(PICO_SDK_STAMP)
-
 # Run from SRAM. To disable, set environment variable RUN_FROM_RAM=0
 ifeq ($(RUN_FROM_RAM),)
 RUN_FROM_RAM = 1
@@ -46,7 +42,7 @@ ifeq ($(DEBUG_HARDFAULTS),PICO)
 CFLAGS          += -DDEBUG_HARDFAULTS
 endif
 
-SDK_DIR         = $(LIB_MODULES_DIR)/pico-sdk/src
+SDK_DIR         = $(LIB_MAIN_DIR)/pico-sdk/src
 
 #CMSIS
 CMSIS_DIR      := $(SDK_DIR)/rp2_common/cmsis/stub/CMSIS
@@ -106,7 +102,7 @@ PICO_LIB_SRC = \
             rp2_common/pico_stdlib/stdlib.c \
             rp2_common/pico_bit_ops/bit_ops_aeabi.S
 
-TINY_USB_SRC_DIR = $(LIB_MODULES_DIR)/pico-sdk/lib/tinyusb/src
+TINY_USB_SRC_DIR = $(LIB_MAIN_DIR)/pico-sdk/lib/tinyusb/src
 TINYUSB_SRC := \
             $(TINY_USB_SRC_DIR)/tusb.c \
             $(TINY_USB_SRC_DIR)/class/cdc/cdc_device.c \
@@ -370,7 +366,7 @@ SYS_INCLUDE_DIRS = \
             $(SDK_DIR)/$(TARGET_MCU_LIB_LOWER)/pico_platform/include \
             $(SDK_DIR)/$(TARGET_MCU_LIB_LOWER)/hardware_regs/include \
             $(SDK_DIR)/$(TARGET_MCU_LIB_LOWER)/hardware_structs/include \
-            $(LIB_MODULES_DIR)/pico-sdk/lib/tinyusb/src
+            $(LIB_MAIN_DIR)/pico-sdk/lib/tinyusb/src
 
 SYS_INCLUDE_DIRS += \
             $(SDK_DIR)/rp2350/boot_stage2/include
@@ -378,11 +374,8 @@ SYS_INCLUDE_DIRS += \
 #Flags
 ARCH_FLAGS      = -mthumb -mcpu=cortex-m33 -march=armv8-m.main+fp+dsp -mcmse -mfloat-abi=softfp
 ARCH_FLAGS      += -DPICO_COPY_TO_RAM=$(RUN_FROM_RAM)
-
-# Work around memcpy alignment issue: compiler to generate function calls
-# rather than inlining code that is sometimes broken.
-# (Calls to memcpy, memset become calls to performant wrapped versions.)
-ARCH_FLAGS      += -fno-builtin-memcpy -fno-builtin-memset
+# work around memcpy alignment issue
+ARCH_FLAGS      += -fno-builtin-memcpy
 
 PICO_STDIO_USB_FLAGS = \
             -DLIB_PICO_PRINTF=1 \
@@ -412,18 +405,7 @@ PICO_STDIO_LD_FLAGS = $(foreach fn, $(PICO_STDIO_WRAP_FNS), -Wl,--wrap=$(fn))
 PICO_BIT_OPS_LD_FLAGS = \
             -Wl,--wrap=__ctzdi2
 
-PICO_LIB_SRC += \
-            PICO/memfunctions.S
-
-PICO_MEM_WRAP_FNS = \
-            memcpy_44 \
-            memcpy \
-            memset_4 \
-            memset
-
-PICO_MEM_LD_FLAGS = $(foreach fn, $(PICO_MEM_WRAP_FNS), -Wl,--wrap=$(fn))
-
-EXTRA_LD_FLAGS += $(PICO_STDIO_LD_FLAGS) $(PICO_TRACE_LD_FLAGS) $(PICO_FLOAT_LD_FLAGS) $(PICO_DOUBLE_LD_FLAGS) $(PICO_BIT_OPS_LD_FLAGS) $(PICO_MEM_LD_FLAGS)
+EXTRA_LD_FLAGS += $(PICO_STDIO_LD_FLAGS) $(PICO_TRACE_LD_FLAGS) $(PICO_FLOAT_LD_FLAGS) $(PICO_DOUBLE_LD_FLAGS) $(PICO_BIT_OPS_LD_FLAGS)
 
 ifdef RP2350_TARGET
 
@@ -482,29 +464,13 @@ DEVICE_FLAGS    += \
             -DPICO_USE_BLOCKED_RAM=0 \
             -DPICO_CORE1_STACK_SIZE=0x1000
 
-
-# LD_SCRIPT must be set to the first included linker script.
-# Set the sizes of flash and contents in LD_SCRIPT, other linker files loaded via EXTRA_LD_FLAGS.
-
-# Optional board-specific linker script for setting the size of the primary flash, and the allocation for fonts.
-CONFIG_FLASH_MEM_SCRIPT = $(CONFIG_DIR)/configs/$(CONFIG)/pico_flash_mem.ld
-
-# If pico_flash_mem.ld exists in the config folder, use that, otherwise load defaults from pico_flash_mem_defaults.ld
-ifneq ($(wildcard $(CONFIG_FLASH_MEM_SCRIPT)),)
-LD_SCRIPT += $(CONFIG_FLASH_MEM_SCRIPT)
-else
-LD_SCRIPT += $(LINKER_DIR)/pico_flash_mem_defaults.ld
-endif
-
 ifeq ($(RUN_FROM_RAM),1)
-# RunFromRAM -> loads everything into RAM, fastest, uses most RAM
-# EXTRA_LD_FLAGS  += -T$(LINKER_DIR)/pico_rp2350_RunFromRAM.ld
-
-# RunFromHybrid -> load most code / data into RAM, with some exclusions (cli, pg, ...)
-EXTRA_LD_FLAGS  += -T$(LINKER_DIR)/pico_rp2350_RunFromHybrid.ld
+LD_SCRIPT       = $(LINKER_DIR)/pico_rp2350_RunFromRAM.ld
 else
-EXTRA_LD_FLAGS  += -T$(LINKER_DIR)/pico_rp2350_RunFromFLASH.ld
+LD_SCRIPT       = $(LINKER_DIR)/pico_rp2350_RunFromFLASH.ld
 endif
+
+STARTUP_SRC     = PICO/startup/bs2_default_padded_checksummed.S
 
 # Override the OPTIMISE_SPEED compiler setting to save flash space on these 512KB targets.
 # Performance is only slightly affected but around 50 kB of flash are saved.
@@ -574,16 +540,10 @@ MCU_COMMON_SRC = \
             PICO/dshot_pico.c \
             PICO/exti_pico.c \
             PICO/io_pico.c \
-            PICO/osd/font_betaflight.c \
-            PICO/osd/fb_osd_pico.c \
-            PICO/osd/osd_element_ah.c \
-            PICO/osd/osd_elements_pico.c \
-            PICO/osd/osd_pico.c \
             PICO/persistent.c \
             PICO/pwm_motor_pico.c \
             PICO/pwm_servo_pico.c \
             PICO/pwm_beeper_pico.c \
-            PICO/gyro_clkin_pico.c \
             PICO/serial_usb_vcp_pico.c \
             PICO/system.c \
             PICO/uart/serial_uart_pico.c \
@@ -621,11 +581,3 @@ PICO_LIB_OBJS = $(addsuffix .o, $(basename $(PICO_LIB_SRC)))
 PICO_LIB_OBJS += $(addsuffix .o, $(basename $(PICO_TRACE_SRC)))
 PICO_LIB_TARGETS := $(foreach pobj, $(PICO_LIB_OBJS), %/$(pobj))
 $(PICO_LIB_TARGETS): CC_DEFAULT_OPTIMISATION := $(PICO_LIB_OPTIMISATION)
-
-# Linker script pico_rp2350_RunFromHybrid.ld modified to assign symbols from
-# certain files into flash instead of RAM (save memory without impacting performance), but
-# that can't work if build uses lto (link time optimisation has the effect of
-# breaking files up into temporary files)
-ifeq ($(RUN_FROM_RAM),1)
-LTO                   := no
-endif

@@ -17,5 +17,7 @@
 
 #pragma once
 
+#include "io/gps.h"
+
 #include "flight/autopilot_multirotor.h"
 #include "flight/autopilot_wing.h"

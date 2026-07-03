@@ -59,7 +59,6 @@ extern "C" {
     #include "sensors/sensors.h"
     #include "sensors/acceleration.h"
     #include "sensors/barometer.h"
-    #include "sensors/compass.h"
 
     #include "msp/msp_serial.h"
 
@@ -70,7 +69,6 @@ extern "C" {
     rssiSource_e rssiSource;
     bool airMode;
     baro_t baro;
-    mag_t mag;
 
     uint16_t testBatteryVoltage = 0;
     int32_t testAmperage = 0;

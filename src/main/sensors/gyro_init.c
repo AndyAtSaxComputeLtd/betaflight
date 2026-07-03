@@ -66,10 +66,6 @@
 #include "flight/dyn_notch_filter.h"
 #endif
 
-#ifdef USE_RPM_FILTER
-#include "flight/rpm_filter.h"
-#endif
-
 #include "pg/gyrodev.h"
 
 #include "sensors/gyro.h"
@@ -86,8 +82,7 @@ static uint8_t gyroDetectedFlags = 0;
 
 static uint16_t calculateNyquistAdjustedNotchHz(uint16_t notchHz, uint16_t notchCutoffHz)
 {
-    // Limit the nyquist to 95% to help with stability
-    const uint32_t gyroFrequencyNyquist = (1000000 / 2 / gyro.targetLooptime) * 0.95f;
+    const uint32_t gyroFrequencyNyquist = 1000000 / 2 / gyro.targetLooptime;
     if (notchHz > gyroFrequencyNyquist) {
         if (notchCutoffHz < gyroFrequencyNyquist) {
             notchHz = gyroFrequencyNyquist;
@@ -106,10 +101,10 @@ static void gyroInitFilterNotch1(uint16_t notchHz, uint16_t notchCutoffHz)
     notchHz = calculateNyquistAdjustedNotchHz(notchHz, notchCutoffHz);
 
     if (notchHz != 0 && notchCutoffHz != 0) {
-        gyro.notchFilter1ApplyFn = (filterApplyFnPtr)svfNotchApply;
+        gyro.notchFilter1ApplyFn = (filterApplyFnPtr)biquadFilterApply;
         const float notchQ = filterGetNotchQ(notchHz, notchCutoffHz);
         for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-            svfNotchInit(&gyro.notchFilter1[axis], notchHz, gyro.targetLooptime * 1e-6f, notchQ);
+            biquadFilterInit(&gyro.notchFilter1[axis], notchHz, gyro.targetLooptime, notchQ, FILTER_NOTCH, 1.0f);
         }
     }
 }
@@ -121,10 +116,10 @@ static void gyroInitFilterNotch2(uint16_t notchHz, uint16_t notchCutoffHz)
     notchHz = calculateNyquistAdjustedNotchHz(notchHz, notchCutoffHz);
 
     if (notchHz != 0 && notchCutoffHz != 0) {
-        gyro.notchFilter2ApplyFn = (filterApplyFnPtr)svfNotchApply;
+        gyro.notchFilter2ApplyFn = (filterApplyFnPtr)biquadFilterApply;
         const float notchQ = filterGetNotchQ(notchHz, notchCutoffHz);
         for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-            svfNotchInit(&gyro.notchFilter2[axis], notchHz, gyro.targetLooptime * 1e-6f, notchQ);
+            biquadFilterInit(&gyro.notchFilter2[axis], notchHz, gyro.targetLooptime, notchQ, FILTER_NOTCH, 1.0f);
         }
     }
 }
@@ -151,8 +146,8 @@ static bool gyroInitLowpassFilterLpf(int slot, int type, uint16_t lpfHz, uint32_
 
     bool ret = false;
 
-    // Limit the nyquist to 95% to help with stability
-    const uint32_t gyroFrequencyNyquist = (1000000 / 2 / looptime) * 0.95f;
+    // Establish some common constants
+    const uint32_t gyroFrequencyNyquist = 1000000 / 2 / looptime;
     const float gyroDt = looptime * 1e-6f;
 
     // Dereference the pointer to null before checking valid cutoff and filter
@@ -169,11 +164,15 @@ static bool gyroInitLowpassFilterLpf(int slot, int type, uint16_t lpfHz, uint32_
             }
             ret = true;
             break;
-        case FILTER_SVF:
+        case FILTER_BIQUAD:
             if (lpfHz <= gyroFrequencyNyquist) {
-                *lowpassFilterApplyFn = (filterApplyFnPtr) svfLowpassFilterApply;
+#ifdef USE_DYN_LPF
+                *lowpassFilterApplyFn = (filterApplyFnPtr) biquadFilterApplyDF1;
+#else
+                *lowpassFilterApplyFn = (filterApplyFnPtr) biquadFilterApply;
+#endif
                 for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-                    svfLowpassFilterInit(&lowpassFilter[axis].svfLowpassFilterState, lpfHz, gyroDt);
+                    biquadFilterInitLPF(&lowpassFilter[axis].biquadFilterState, lpfHz, looptime);
                 }
                 ret = true;
             }
@@ -205,8 +204,8 @@ static void dynLpfFilterInit(void)
         case FILTER_PT1:
             gyro.dynLpfFilter = DYN_LPF_PT1;
             break;
-        case FILTER_SVF:
-            gyro.dynLpfFilter = DYN_LPF_SVF;
+        case FILTER_BIQUAD:
+            gyro.dynLpfFilter = DYN_LPF_BIQUAD;
             break;
         case FILTER_PT2:
             gyro.dynLpfFilter = DYN_LPF_PT2;
@@ -257,10 +256,7 @@ void gyroInitFilters(void)
     dynLpfFilterInit();
 #endif
 #ifdef USE_DYN_NOTCH_FILTER
-    dynNotchInit(dynNotchConfig(), gyro.targetLooptime * 1e-6f);
-#endif
-#ifdef USE_RPM_FILTER
-    rpmFilterInit(rpmFilterConfig(), gyro.targetLooptime);
+    dynNotchInit(dynNotchConfig(), gyro.targetLooptime);
 #endif
 
     const float k = pt1FilterGain(GYRO_IMU_DOWNSAMPLE_CUTOFF_HZ, gyro.targetLooptime * 1e-6f);
@@ -315,9 +311,6 @@ void gyroInitSensor(gyroSensor_t *gyroSensor, const gyroDeviceConfig_t *config)
     case GYRO_MPU9250:
     case GYRO_LSM6DSO:
     case GYRO_LSM6DSV16X:
-    case GYRO_LSM6DSK320X:
-    case GYRO_ICM42622P:
-    case GYRO_ICM42686P:
     case GYRO_ICM42688P:
     case GYRO_IIM42652:
     case GYRO_IIM42653:
@@ -436,11 +429,9 @@ STATIC_UNIT_TESTED gyroHardware_e gyroDetect(gyroDev_t *dev)
         FALLTHROUGH;
 #endif
 
-#if defined(USE_GYRO_SPI_ICM42605) || defined(USE_ACCGYRO_ICM42622P) || defined(USE_ACCGYRO_ICM42686P) || defined(USE_GYRO_SPI_ICM42688P) || defined(USE_ACCGYRO_IIM42652) || defined(USE_ACCGYRO_IIM42653)
+#if defined(USE_GYRO_SPI_ICM42605) || defined(USE_GYRO_SPI_ICM42688P) || defined(USE_ACCGYRO_IIM42652) || defined(USE_ACCGYRO_IIM42653)
     case GYRO_ICM42605:
-    case GYRO_ICM42622P:
     case GYRO_ICM42688P:
-    case GYRO_ICM42686P:
     case GYRO_IIM42652:
     case GYRO_IIM42653:
         if (icm426xxSpiGyroDetect(dev)) {
@@ -448,14 +439,8 @@ STATIC_UNIT_TESTED gyroHardware_e gyroDetect(gyroDev_t *dev)
             case ICM_42605_SPI:
                 gyroHardware = GYRO_ICM42605;
                 break;
-            case ICM_42622P_SPI:
-                gyroHardware = GYRO_ICM42622P;
-                break;
             case ICM_42688P_SPI:
                 gyroHardware = GYRO_ICM42688P;
-                break;
-            case ICM_42686P_SPI:
-                gyroHardware = GYRO_ICM42686P;
                 break;
             case IIM_42652_SPI:
                 gyroHardware = GYRO_IIM42652;
@@ -528,14 +513,6 @@ STATIC_UNIT_TESTED gyroHardware_e gyroDetect(gyroDev_t *dev)
         FALLTHROUGH;
 #endif
 
-#ifdef USE_ACCGYRO_LSM6DSK320X
-    case GYRO_LSM6DSK320X:
-        if (lsm6dsk320xSpiGyroDetect(dev)) {
-            gyroHardware = GYRO_LSM6DSK320X;
-            break;
-        }
-        FALLTHROUGH;
-#endif
 
 #ifdef USE_ACCGYRO_ICM40609D
     case GYRO_ICM40609D:
