@@ -23,8 +23,6 @@
 #define OSD_WARNINGS_MAX_SIZE 31         // buffer size excluding terminating '\0'
 #define OSD_WARNINGS_PREFFERED_SIZE 12   // normal size for OSD_WARNINGS (centered on OSD)
 
-extern const char CRASHFLIP_WARNING[];
-
 STATIC_ASSERT(OSD_WARNINGS_MAX_SIZE + 1 <= OSD_ELEMENT_BUFFER_LENGTH, osd_warnings_size_exceeds_buffer_size);
 
 void renderOsdWarning(char *warningText, bool *blinking, uint8_t *displayAttr);

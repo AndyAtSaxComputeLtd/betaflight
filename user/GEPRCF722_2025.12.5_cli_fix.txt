@@ -1,0 +1,40 @@
+# GEPRCF722 Betaflight 2025.12.5 CLI fix-up
+# Paste this after importing the old CLI dump.
+# LED and color commands are intentionally omitted.
+
+batch start
+
+# Old: beeper CRASH_FLIP
+beeper CRASHFLIP
+
+# Old: set gyro_to_use = FIRST
+set gyro_enabled_bitmask = 1
+
+# Old: set rc_smoothing_feedforward_cutoff = 0
+set rc_smoothing_throttle_cutoff = 0
+
+# Old: set dshot_idle_value = 550
+set motor_idle = 550
+
+# Old: set failsafe_off_delay = 10
+set failsafe_recovery_delay = 10
+
+# Old: set crashflip_expo = 35
+set crashflip_rate = 35
+
+# Old: set debug_mode = GYRO_SCALED
+# GYRO_SAMPLE[0] is the current equivalent of the old scaled gyro sample.
+set debug_mode = GYRO_SAMPLE
+
+# Old: set dyn_idle_start_increase = 50
+set dyn_idle_max_increase = 50
+
+# Old: set simplified_dmax_gain = 5
+set simplified_d_max_gain = 5
+
+# Old: set iterm_limit = 400
+# 80 percent of pidsum_limit 500 gives the same effective 400 limit.
+set iterm_windup = 80
+set pidsum_limit = 500
+
+save
