@@ -361,6 +361,10 @@ FLASH_SRC += \
             drivers/flash/flash_w25q128fv.c \
             io/flashfs.c
 
+EVENTLOG_SRC += \
+            eventlog/eventlog.c \
+            eventlog/eventlog_flash.c
+
 SDCARD_SRC += \
             drivers/sdcard.c \
             drivers/sdcard_spi.c \
@@ -541,7 +545,7 @@ SRC += $(wildcard $(DSP_LIB)/Source/*/*.S)
 
 endif
 
-SRC += $(FLASH_SRC) $(MSC_SRC) $(SDCARD_SRC) $(COMMON_SRC)
+SRC += $(FLASH_SRC) $(MSC_SRC) $(SDCARD_SRC) $(EVENTLOG_SRC) $(COMMON_SRC)
 
 #excludes
 SRC   := $(filter-out $(MCU_EXCLUDES), $(SRC))

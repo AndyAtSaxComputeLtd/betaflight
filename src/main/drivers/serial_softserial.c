@@ -35,7 +35,12 @@
 
 #include "build/debug.h"
 
+#include "common/printf.h"
 #include "common/utils.h"
+
+#ifdef USE_EVENTLOG
+#include "eventlog/eventlog.h"
+#endif
 
 #include "io/serial.h"
 
@@ -87,6 +92,8 @@ typedef struct softSerial_s {
 
     uint16_t         transmissionErrors;
     uint16_t         receiveErrors;
+    bool             txLogged;
+    bool             rxLogged;
 
     timerMode_e      timerMode;
 
@@ -203,21 +210,48 @@ static softSerial_t* softSerialFromIdentifier(serialPortIdentifier_e identifier)
     return NULL;
 }
 
+#ifdef USE_EVENTLOG
+static void softSerialLog(const char *event, serialPortIdentifier_e identifier, const char *reason, uint32_t baud, portMode_e mode, portOptions_e options)
+{
+    char detail[96];
+    tfp_sprintf(detail, "id=%u reason=%s baud=%lu mode=%u opt=%u", (unsigned)identifier, reason ? reason : "", (unsigned long)baud, (unsigned)mode, (unsigned)options);
+    eventlogAdd(event, detail);
+}
+#endif
+
 serialPort_t *softSerialOpen(serialPortIdentifier_e identifier, serialReceiveCallbackPtr rxCallback, void *rxCallbackData, uint32_t baud, portMode_e mode, portOptions_e options)
 {
     softSerial_t *softSerial = softSerialFromIdentifier(identifier);
     if (!softSerial) {
+#ifdef USE_EVENTLOG
+        softSerialLog("SS_FAIL", identifier, "bad_identifier", baud, mode, options);
+#endif
         return NULL;
     }
     // fill identifier early, so initialization code can use it
     softSerial->port.identifier = identifier;
 
     const int resourceIndex = serialResourceIndex(identifier);
+    if (resourceIndex < 0) {
+#ifdef USE_EVENTLOG
+        softSerialLog("SS_FAIL", identifier, "bad_resource", baud, mode, options);
+#endif
+        return NULL;
+    }
+
     const resourceOwner_e ownerTxRx = serialOwnerTxRx(identifier); // rx is always +1
     const int ownerIndex = serialOwnerIndex(identifier);
 
     const ioTag_t tagRx = serialPinConfig()->ioTagRx[resourceIndex];
     const ioTag_t tagTx = serialPinConfig()->ioTagTx[resourceIndex];
+
+#ifdef USE_EVENTLOG
+    {
+        char detail[96];
+        tfp_sprintf(detail, "id=%u res=%d rxTag=%u txTag=%u baud=%lu mode=%u opt=%u", (unsigned)identifier, resourceIndex, (unsigned)tagRx, (unsigned)tagTx, (unsigned long)baud, (unsigned)mode, (unsigned)options);
+        eventlogAdd("SS_OPEN", detail);
+    }
+#endif
 
     const timerHardware_t *timerTx = timerAllocate(tagTx, ownerTxRx, ownerIndex);
     const timerHardware_t *timerRx = (tagTx == tagRx) ? timerTx : timerAllocate(tagRx, ownerTxRx + 1, ownerIndex);
@@ -230,6 +264,9 @@ serialPort_t *softSerialOpen(serialPortIdentifier_e identifier, serialReceiveCal
         // However, for consistency with hardware UARTs, we only use TX pin,
         // and this pin must have a timer, and it must not be N-Channel.
         if (!timerTx || (timerTx->output & TIMER_OUTPUT_N_CHANNEL)) {
+#ifdef USE_EVENTLOG
+            softSerialLog("SS_FAIL", identifier, !timerTx ? "bidir_no_tx_timer" : "bidir_tx_n_channel", baud, mode, options);
+#endif
             return NULL;
         }
 
@@ -241,6 +278,9 @@ serialPort_t *softSerialOpen(serialPortIdentifier_e identifier, serialReceiveCal
         if (mode & MODE_RX) {
             // Need a pin & a timer on RX. Channel must not be N-Channel.
             if (!timerRx || (timerRx->output & TIMER_OUTPUT_N_CHANNEL)) {
+#ifdef USE_EVENTLOG
+                softSerialLog("SS_FAIL", identifier, !timerRx ? "rx_no_timer" : "rx_n_channel", baud, mode, options);
+#endif
                 return NULL;
             }
 
@@ -254,14 +294,21 @@ serialPort_t *softSerialOpen(serialPortIdentifier_e identifier, serialReceiveCal
 
         if (mode & MODE_TX) {
             // Need a pin on TX
-            if (!txIO)
+            if (!txIO) {
+#ifdef USE_EVENTLOG
+                softSerialLog("SS_FAIL", identifier, "tx_no_pin", baud, mode, options);
+#endif
                 return NULL;
+            }
 
             softSerial->txIO = txIO;
 
             if (!(mode & MODE_RX)) {
                 // TX Simplex, must have a timer
                 if (!timerTx) {
+#ifdef USE_EVENTLOG
+                    softSerialLog("SS_FAIL", identifier, "tx_no_timer", baud, mode, options);
+#endif
                     return NULL;
                 }
                 softSerial->timerHardware = timerTx;
@@ -284,6 +331,8 @@ serialPort_t *softSerialOpen(serialPortIdentifier_e identifier, serialReceiveCal
 
     softSerial->transmissionErrors = 0;
     softSerial->receiveErrors = 0;
+    softSerial->txLogged = false;
+    softSerial->rxLogged = false;
 
     softSerial->rxActive = false;
     softSerial->isTransmittingData = false;
@@ -322,6 +371,10 @@ serialPort_t *softSerialOpen(serialPortIdentifier_e identifier, serialReceiveCal
     }
 
     serialInputPortActivate(softSerial);
+
+#ifdef USE_EVENTLOG
+    softSerialLog("SS_READY", identifier, softSerial->timerMode == TIMER_MODE_DUAL ? "dual_timer" : "single_timer", baud, mode, options);
+#endif
 
     return &softSerial->port;
 }
@@ -571,6 +624,17 @@ uint8_t softSerialReadByte(serialPort_t *instance)
 
     ch = instance->rxBuffer[instance->rxBufferTail];
     instance->rxBufferTail = (instance->rxBufferTail + 1) % instance->rxBufferSize;
+
+#ifdef USE_EVENTLOG
+    softSerial_t *softSerial = (softSerial_t *)instance;
+    if (!softSerial->rxLogged) {
+        char detail[48];
+        tfp_sprintf(detail, "id=%u first=0x%02x", (unsigned)instance->identifier, ch);
+        eventlogAdd("SS_RX_BYTE", detail);
+        softSerial->rxLogged = true;
+    }
+#endif
+
     return ch;
 }
 
@@ -582,6 +646,16 @@ void softSerialWriteByte(serialPort_t *s, uint8_t ch)
 
     s->txBuffer[s->txBufferHead] = ch;
     s->txBufferHead = (s->txBufferHead + 1) % s->txBufferSize;
+
+#ifdef USE_EVENTLOG
+    softSerial_t *softSerial = (softSerial_t *)s;
+    if (!softSerial->txLogged) {
+        char detail[48];
+        tfp_sprintf(detail, "id=%u first=0x%02x", (unsigned)s->identifier, ch);
+        eventlogAdd("SS_TX_BYTE", detail);
+        softSerial->txLogged = true;
+    }
+#endif
 }
 
 void softSerialSetBaudRate(serialPort_t *s, uint32_t baudRate)

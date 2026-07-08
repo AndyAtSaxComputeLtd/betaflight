@@ -212,6 +212,7 @@
 #define USE_OSD_HD
 #endif
 #define USE_BLACKBOX
+#define USE_EVENTLOG
 
 #if TARGET_FLASH_SIZE >= 1024
 

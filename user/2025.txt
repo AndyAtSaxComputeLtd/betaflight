@@ -1,12 +1,9 @@
-# Converted from 4.x CLI dump to 2025.x-compatible CLI lines
-# Review skipped lines before importing into Betaflight 2025.x
 # 
 
 # Dump all
 
 # version
-# Betaflight / STM32F7X2 (S7X2) 4.5.2 Mar 22 2025 / 18:23:30 (024f8e13d) MSP API: 1.46
-# config rev: 3eedb40
+# Betaflight / STM32F7X2 (F722) 2025.12.5 Jul  3 2026 / 12:12:14 (norevision) MSP API: 1.47
 
 # start the command batch
 batch start
@@ -28,31 +25,35 @@ resource MOTOR 5 B06
 resource MOTOR 6 B07
 resource MOTOR 7 NONE
 resource MOTOR 8 NONE
-# Skipped target-specific resource line: resource LED_STRIP 1 A08
+resource SERVO 1 NONE
+resource SERVO 2 NONE
+resource SERVO 3 NONE
+resource SERVO 4 NONE
+resource SERVO 5 NONE
+resource SERVO 6 NONE
+resource SERVO 7 NONE
+resource SERVO 8 NONE
+resource PPM 1 A03
+resource PWM 1 A02
+resource PWM 2 NONE
+resource PWM 3 NONE
+resource PWM 4 NONE
+resource PWM 5 NONE
+resource PWM 6 NONE
+resource PWM 7 NONE
+resource PWM 8 NONE
 resource SERIAL_TX 1 A09
 resource SERIAL_TX 2 A02
 resource SERIAL_TX 3 B10
 resource SERIAL_TX 4 A00
 resource SERIAL_TX 5 NONE
 resource SERIAL_TX 6 C06
-# Skipped target-specific resource line: resource SERIAL_TX 7 NONE
-# Skipped target-specific resource line: resource SERIAL_TX 8 NONE
-# Skipped target-specific resource line: resource SERIAL_TX 9 NONE
-# Skipped target-specific resource line: resource SERIAL_TX 10 NONE
 resource SERIAL_RX 1 A10
 resource SERIAL_RX 2 A03
 resource SERIAL_RX 3 B11
 resource SERIAL_RX 4 A01
 resource SERIAL_RX 5 NONE
 resource SERIAL_RX 6 C07
-# Skipped target-specific resource line: resource SERIAL_RX 7 NONE
-# Skipped target-specific resource line: resource SERIAL_RX 8 NONE
-# Skipped target-specific resource line: resource SERIAL_RX 9 NONE
-# Skipped target-specific resource line: resource SERIAL_RX 10 NONE
-# Skipped target-specific resource line: resource SOFTSERIAL_TX 1 NONE
-# Skipped target-specific resource line: resource SOFTSERIAL_TX 2 NONE
-# Skipped target-specific resource line: resource SOFTSERIAL_RX 1 NONE
-# Skipped target-specific resource line: resource SOFTSERIAL_RX 2 NONE
 resource I2C_SCL 1 B08
 resource I2C_SCL 2 B10
 resource I2C_SCL 3 NONE
@@ -64,6 +65,8 @@ resource I2C_SDA 4 NONE
 resource LED 1 A13
 resource LED 2 A14
 resource LED 3 NONE
+resource RX_BIND 1 NONE
+resource RX_BIND_PLUG 1 NONE
 resource SPI_SCK 1 A05
 resource SPI_SCK 2 B13
 resource SPI_SCK 3 C10
@@ -90,6 +93,7 @@ resource PINIO 3 NONE
 resource PINIO 4 NONE
 resource USB_MSC_PIN 1 NONE
 resource FLASH_CS 1 B12
+resource OSD_CS 1 B02
 resource GYRO_EXTI 1 C03
 resource GYRO_EXTI 2 C04
 resource GYRO_CS 1 A15
@@ -151,22 +155,12 @@ dma UART_TX 3 NONE
 dma UART_TX 4 NONE
 dma UART_TX 5 NONE
 dma UART_TX 6 NONE
-# Skipped unavailable LED/target command: dma UART_TX 7 NONE
-# Skipped unavailable LED/target command: dma UART_TX 8 NONE
-# Skipped unavailable LED/target command: dma UART_TX 9 NONE
-# Skipped unavailable LED/target command: dma UART_TX 10 NONE
-# Skipped unavailable LED/target command: dma UART_TX 11 NONE
 dma UART_RX 1 NONE
 dma UART_RX 2 NONE
 dma UART_RX 3 NONE
 dma UART_RX 4 NONE
 dma UART_RX 5 NONE
 dma UART_RX 6 NONE
-# Skipped unavailable LED/target command: dma UART_RX 7 NONE
-# Skipped unavailable LED/target command: dma UART_RX 8 NONE
-# Skipped unavailable LED/target command: dma UART_RX 9 NONE
-# Skipped unavailable LED/target command: dma UART_RX 10 NONE
-# Skipped unavailable LED/target command: dma UART_RX 11 NONE
 dma pin B04 0
 # pin B04: DMA1 Stream 4 Channel 5
 dma pin B05 0
@@ -190,42 +184,55 @@ feature -INFLIGHT_ACC_CAL
 feature -RX_SERIAL
 feature -MOTOR_STOP
 feature -SERVO_TILT
-# Skipped removed feature: feature -SOFTSERIAL
-# Skipped removed feature: feature -GPS
-# Skipped removed feature: feature -RANGEFINDER
+feature -SOFTSERIAL
+feature -GPS
+feature -OPTICALFLOW
+feature -RANGEFINDER
 feature -TELEMETRY
 feature -3D
-# Skipped removed feature: feature -RX_PARALLEL_PWM
-# Skipped removed feature: feature -RX_MSP
+feature -RX_PARALLEL_PWM
 feature -RSSI_ADC
-# Skipped removed feature: feature -LED_STRIP
-# Skipped removed feature: feature -DISPLAY
+feature -LED_STRIP
+feature -DISPLAY
 feature -OSD
 feature -CHANNEL_FORWARDING
-# Skipped removed feature: feature -TRANSPONDER
+feature -TRANSPONDER
 feature -AIRMODE
-# Skipped removed feature: feature -RX_SPI
+feature -RX_SPI
 feature -ESC_SENSOR
 feature -ANTI_GRAVITY
 feature RX_SERIAL
-# Skipped removed feature: feature GPS
 feature OSD
 feature AIRMODE
 feature ESC_SENSOR
 feature ANTI_GRAVITY
 
 # serial
-serial 20 1 115200 57600 0 115200
-serial 0 131073 115200 57600 0 115200
-serial 1 64 115200 57600 0 115200
-serial 2 0 115200 57600 0 115200
-serial 3 2 115200 57600 0 115200
-serial 5 1024 115200 57600 0 115200
+serial VCP 1 115200 57600 0 115200
+serial UART1 131073 115200 57600 0 115200
+serial UART2 64 115200 57600 0 115200
+serial UART3 0 115200 57600 0 115200
+serial UART4 2 115200 57600 0 115200
+serial UART6 1024 115200 57600 0 115200
 
 # mixer
 mixer QUADX
 
 mmix reset
+
+
+# servo
+servo 0 1000 2000 1500 100 -1
+servo 1 1000 2000 1500 100 -1
+servo 2 1000 2000 1500 100 -1
+servo 3 1000 2000 1500 100 -1
+servo 4 1000 2000 1500 100 -1
+servo 5 1000 2000 1500 100 -1
+servo 6 1000 2000 1500 100 -1
+servo 7 1000 2000 1500 100 -1
+
+# servo mixer
+smix reset
 
 
 # beeper
@@ -249,11 +256,9 @@ beeper ARMED
 beeper SYSTEM_INIT
 beeper -ON_USB
 beeper BLACKBOX_ERASE
-# Old: beeper CRASH_FLIP
 beeper CRASHFLIP
 beeper CAM_CONNECTION_OPEN
 beeper CAM_CONNECTION_CLOSE
-# Skipped removed beeper: beeper RC_SMOOTHING_INIT_FAIL
 
 # beacon
 beacon RX_LOST
@@ -262,117 +267,15 @@ beacon RX_SET
 # map
 map AETR1234
 
-# led
-# Skipped unavailable LED/target command: led 0 0,0::C:0
-# Skipped unavailable LED/target command: led 1 0,0::C:0
-# Skipped unavailable LED/target command: led 2 0,0::C:0
-# Skipped unavailable LED/target command: led 3 0,0::C:0
-# Skipped unavailable LED/target command: led 4 0,0::C:0
-# Skipped unavailable LED/target command: led 5 0,0::C:0
-# Skipped unavailable LED/target command: led 6 0,0::C:0
-# Skipped unavailable LED/target command: led 7 0,0::C:0
-# Skipped unavailable LED/target command: led 8 0,0::C:0
-# Skipped unavailable LED/target command: led 9 0,0::C:0
-# Skipped unavailable LED/target command: led 10 0,0::C:0
-# Skipped unavailable LED/target command: led 11 0,0::C:0
-# Skipped unavailable LED/target command: led 12 0,0::C:0
-# Skipped unavailable LED/target command: led 13 0,0::C:0
-# Skipped unavailable LED/target command: led 14 0,0::C:0
-# Skipped unavailable LED/target command: led 15 0,0::C:0
-# Skipped unavailable LED/target command: led 16 0,0::C:0
-# Skipped unavailable LED/target command: led 17 0,0::C:0
-# Skipped unavailable LED/target command: led 18 0,0::C:0
-# Skipped unavailable LED/target command: led 19 0,0::C:0
-# Skipped unavailable LED/target command: led 20 0,0::C:0
-# Skipped unavailable LED/target command: led 21 0,0::C:0
-# Skipped unavailable LED/target command: led 22 0,0::C:0
-# Skipped unavailable LED/target command: led 23 0,0::C:0
-# Skipped unavailable LED/target command: led 24 0,0::C:0
-# Skipped unavailable LED/target command: led 25 0,0::C:0
-# Skipped unavailable LED/target command: led 26 0,0::C:0
-# Skipped unavailable LED/target command: led 27 0,0::C:0
-# Skipped unavailable LED/target command: led 28 0,0::C:0
-# Skipped unavailable LED/target command: led 29 0,0::C:0
-# Skipped unavailable LED/target command: led 30 0,0::C:0
-# Skipped unavailable LED/target command: led 31 0,0::C:0
-
-# color
-# Skipped unavailable LED/target command: color 0 0,0,0
-# Skipped unavailable LED/target command: color 1 0,255,255
-# Skipped unavailable LED/target command: color 2 0,0,255
-# Skipped unavailable LED/target command: color 3 30,0,255
-# Skipped unavailable LED/target command: color 4 60,0,255
-# Skipped unavailable LED/target command: color 5 90,0,255
-# Skipped unavailable LED/target command: color 6 120,0,255
-# Skipped unavailable LED/target command: color 7 150,0,255
-# Skipped unavailable LED/target command: color 8 180,0,255
-# Skipped unavailable LED/target command: color 9 210,0,255
-# Skipped unavailable LED/target command: color 10 240,0,255
-# Skipped unavailable LED/target command: color 11 270,0,255
-# Skipped unavailable LED/target command: color 12 300,0,255
-# Skipped unavailable LED/target command: color 13 330,0,255
-# Skipped unavailable LED/target command: color 14 0,0,0
-# Skipped unavailable LED/target command: color 15 0,0,0
-
-# mode_color
-# Skipped unavailable LED/target command: mode_color 0 0 1
-# Skipped unavailable LED/target command: mode_color 0 1 11
-# Skipped unavailable LED/target command: mode_color 0 2 2
-# Skipped unavailable LED/target command: mode_color 0 3 13
-# Skipped unavailable LED/target command: mode_color 0 4 10
-# Skipped unavailable LED/target command: mode_color 0 5 3
-# Skipped unavailable LED/target command: mode_color 1 0 5
-# Skipped unavailable LED/target command: mode_color 1 1 11
-# Skipped unavailable LED/target command: mode_color 1 2 3
-# Skipped unavailable LED/target command: mode_color 1 3 13
-# Skipped unavailable LED/target command: mode_color 1 4 10
-# Skipped unavailable LED/target command: mode_color 1 5 3
-# Skipped unavailable LED/target command: mode_color 2 0 10
-# Skipped unavailable LED/target command: mode_color 2 1 11
-# Skipped unavailable LED/target command: mode_color 2 2 4
-# Skipped unavailable LED/target command: mode_color 2 3 13
-# Skipped unavailable LED/target command: mode_color 2 4 10
-# Skipped unavailable LED/target command: mode_color 2 5 3
-# Skipped unavailable LED/target command: mode_color 3 0 8
-# Skipped unavailable LED/target command: mode_color 3 1 11
-# Skipped unavailable LED/target command: mode_color 3 2 4
-# Skipped unavailable LED/target command: mode_color 3 3 13
-# Skipped unavailable LED/target command: mode_color 3 4 10
-# Skipped unavailable LED/target command: mode_color 3 5 3
-# Skipped unavailable LED/target command: mode_color 4 0 7
-# Skipped unavailable LED/target command: mode_color 4 1 11
-# Skipped unavailable LED/target command: mode_color 4 2 3
-# Skipped unavailable LED/target command: mode_color 4 3 13
-# Skipped unavailable LED/target command: mode_color 4 4 10
-# Skipped unavailable LED/target command: mode_color 4 5 3
-# Skipped unavailable LED/target command: mode_color 5 0 0
-# Skipped unavailable LED/target command: mode_color 5 1 0
-# Skipped unavailable LED/target command: mode_color 5 2 0
-# Skipped unavailable LED/target command: mode_color 5 3 0
-# Skipped unavailable LED/target command: mode_color 5 4 0
-# Skipped unavailable LED/target command: mode_color 5 5 0
-# Skipped unavailable LED/target command: mode_color 6 0 6
-# Skipped unavailable LED/target command: mode_color 6 1 10
-# Skipped unavailable LED/target command: mode_color 6 2 1
-# Skipped unavailable LED/target command: mode_color 6 3 0
-# Skipped unavailable LED/target command: mode_color 6 4 0
-# Skipped unavailable LED/target command: mode_color 6 5 2
-# Skipped unavailable LED/target command: mode_color 6 6 3
-# Skipped unavailable LED/target command: mode_color 6 7 6
-# Skipped unavailable LED/target command: mode_color 6 8 0
-# Skipped unavailable LED/target command: mode_color 6 9 0
-# Skipped unavailable LED/target command: mode_color 6 10 0
-# Skipped unavailable LED/target command: mode_color 7 0 3
-
 # aux
 aux 0 0 0 950 1050 0 0
 aux 1 1 5 950 1050 0 0
 aux 2 2 5 1450 1550 0 0
 aux 3 27 1 1450 1550 0 0
-aux 4 46 6 950 1050 0 0
-aux 5 13 3 1950 2050 0 0
-aux 6 35 4 1950 2050 0 0
-aux 7 36 7 1950 2050 0 0
+aux 4 13 3 1950 2050 0 0
+aux 5 35 4 1950 2050 0 0
+aux 6 36 7 1950 2050 0 0
+aux 7 0 0 900 900 0 0
 aux 8 0 0 900 900 0 0
 aux 9 0 0 900 900 0 0
 aux 10 0 0 900 900 0 0
@@ -479,8 +382,9 @@ set gyro_offset_yaw = 0
 set gyro_overflow_detect = ALL
 set yaw_spin_recovery = AUTO
 set yaw_spin_threshold = 1950
-# Old: set gyro_to_use = FIRST
 set gyro_enabled_bitmask = 1
+set gyro_1_enabled = ON
+set gyro_2_enabled = OFF
 set dyn_notch_count = 1
 set dyn_notch_q = 650
 set dyn_notch_min_hz = 100
@@ -513,14 +417,17 @@ set rc_smoothing = ON
 set rc_smoothing_auto_factor = 30
 set rc_smoothing_auto_factor_throttle = 30
 set rc_smoothing_setpoint_cutoff = 0
-# Old: set rc_smoothing_feedforward_cutoff = 0
-set rc_smoothing_throttle_cutoff = 0
 set rc_smoothing_throttle_cutoff = 0
 set rc_smoothing_debug_axis = ROLL
 set fpv_mix_degrees = 0
 set max_aux_channels = 14
 set serialrx_provider = CRSF
 set serialrx_inverted = OFF
+set spektrum_sat_bind = 0
+set spektrum_sat_bind_autoreset = ON
+set srxl2_unit_id = 1
+set srxl2_baud_fast = ON
+set sbus_baud_fast = OFF
 set crsf_use_negotiated_baud = OFF
 set airmode_start_throttle_percent = 25
 set rx_min_usec = 885
@@ -532,6 +439,7 @@ set adc_device = 1
 set adc_vrefint_calibration = 0
 set adc_tempsensor_calibration30 = 0
 set adc_tempsensor_calibration110 = 0
+set input_filtering_mode = OFF
 set blackbox_sample_rate = 1/8
 set blackbox_device = SPIFLASH
 set blackbox_disable_pids = OFF
@@ -543,17 +451,16 @@ set blackbox_disable_rssi = OFF
 set blackbox_disable_gyro = OFF
 set blackbox_disable_gyrounfilt = OFF
 set blackbox_disable_acc = OFF
+set blackbox_disable_attitude = OFF
 set blackbox_disable_debug = OFF
 set blackbox_disable_motors = OFF
+set blackbox_disable_servos = OFF
 set blackbox_disable_rpm = OFF
-# Skipped removed setting: set blackbox_disable_gps = OFF
 set blackbox_mode = NORMAL
 set blackbox_high_resolution = OFF
-# Skipped removed setting: set min_throttle = 1070
 set max_throttle = 2000
 set min_command = 1000
 set motor_kv = 1960
-# Old: set dshot_idle_value = 550
 set motor_idle = 550
 set dshot_burst = ON
 set dshot_bidir = ON
@@ -569,17 +476,17 @@ set motor_output_reordering = 3,2,1,0,4,5,6,7
 set thr_corr_value = 0
 set thr_corr_angle = 800
 set failsafe_delay = 15
-# Old: set failsafe_off_delay = 10
-set failsafe_recovery_delay = 10
+set failsafe_landing_time = 60
 set failsafe_throttle = 1000
 set failsafe_switch_mode = STAGE1
 set failsafe_throttle_low_delay = 100
-set failsafe_procedure = GPS-RESCUE
-set failsafe_recovery_delay = 5
+set failsafe_procedure = DROP
+set failsafe_recovery_delay = 10
 set failsafe_stick_threshold = 30
 set align_board_roll = 0
 set align_board_pitch = 0
 set align_board_yaw = 0
+set gimbal_mode = NORMAL
 set bat_capacity = 0
 set vbat_max_cell_voltage = 430
 set vbat_full_cell_voltage = 410
@@ -613,8 +520,8 @@ set beeper_dshot_beacon_tone = 2
 set yaw_motors_reversed = ON
 set mixer_type = LEGACY
 set crashflip_motor_percent = 0
-# Old: set crashflip_expo = 35
 set crashflip_rate = 35
+set crashflip_auto_rearm = OFF
 set 3d_deadband_low = 1406
 set 3d_deadband_high = 1514
 set 3d_neutral = 1460
@@ -622,6 +529,11 @@ set 3d_deadband_throttle = 50
 set 3d_limit_low = 1000
 set 3d_limit_high = 2000
 set 3d_switched_mode = OFF
+set servo_center_pulse = 1500
+set servo_pwm_rate = 50
+set servo_lowpass_hz = 0
+set tri_unarmed_servo = ON
+set channel_forwarding_start = 4
 set reboot_character = 82
 set serial_update_rate_hz = 100
 set imu_dcm_kp = 2500
@@ -630,46 +542,7 @@ set small_angle = 180
 set imu_process_denom = 2
 set auto_disarm_delay = 5
 set gyro_cal_on_first_arm = OFF
-# Skipped removed setting: set gps_provider = UBLOX
-# Skipped removed setting: set gps_sbas_mode = AUTO
-# Skipped removed setting: set gps_auto_config = ON
-# Skipped removed setting: set gps_auto_baud = ON
-# Skipped removed setting: set gps_ublox_acquire_model = STATIONARY
-# Skipped removed setting: set gps_ublox_flight_model = AIRBORNE_4G
-# Skipped removed setting: set gps_update_rate_hz = 10
-# Skipped removed setting: set gps_ublox_utc_standard = AUTO
-# Skipped removed setting: set gps_ublox_use_galileo = ON
-# Skipped removed setting: set gps_set_home_point_once = ON
-# Skipped removed setting: set gps_use_3d_speed = OFF
-# Skipped removed setting: set gps_sbas_integrity = OFF
-# Skipped removed setting: set gps_nmea_custom_commands = -
-# Skipped removed setting: set gps_rescue_min_start_dist = 15
-# Skipped removed setting: set gps_rescue_alt_mode = MAX_ALT
-# Skipped removed setting: set gps_rescue_initial_climb = 15
-# Skipped removed setting: set gps_rescue_ascend_rate = 750
-# Skipped removed setting: set gps_rescue_return_alt = 20
-# Skipped removed setting: set gps_rescue_ground_speed = 750
-# Skipped removed setting: set gps_rescue_max_angle = 45
-# Skipped removed setting: set gps_rescue_roll_mix = 150
-# Skipped removed setting: set gps_rescue_pitch_cutoff = 75
-# Skipped removed setting: set gps_rescue_imu_yaw_gain = 10
-# Skipped removed setting: set gps_rescue_descent_dist = 20
-# Skipped removed setting: set gps_rescue_descend_rate = 150
-# Skipped removed setting: set gps_rescue_landing_alt = 4
-# Skipped removed setting: set gps_rescue_disarm_threshold = 20
-# Skipped removed setting: set gps_rescue_throttle_min = 1100
-# Skipped removed setting: set gps_rescue_throttle_max = 1700
-# Skipped removed setting: set gps_rescue_throttle_hover = 1275
-# Skipped removed setting: set gps_rescue_sanity_checks = RESCUE_SANITY_FS_ONLY
-# Skipped removed setting: set gps_rescue_min_sats = 5
-# Skipped removed setting: set gps_rescue_allow_arming_without_fix = OFF
-# Skipped removed setting: set gps_rescue_throttle_p = 15
-# Skipped removed setting: set gps_rescue_throttle_i = 15
-# Skipped removed setting: set gps_rescue_throttle_d = 20
-# Skipped removed setting: set gps_rescue_velocity_p = 8
-# Skipped removed setting: set gps_rescue_velocity_i = 40
-# Skipped removed setting: set gps_rescue_velocity_d = 12
-# Skipped removed setting: set gps_rescue_yaw_p = 20
+set prearm_allow_rearm = OFF
 set deadband = 5
 set yaw_deadband = 5
 set yaw_control_reversed = OFF
@@ -681,6 +554,7 @@ set simplified_gyro_filter = ON
 set simplified_gyro_filter_multiplier = 150
 set tlm_inverted = OFF
 set tlm_halfduplex = ON
+set frsky_vfas_precision = 0
 set hott_alarm_int = 5
 set pid_in_tlm = OFF
 set report_cell_voltage = ON
@@ -705,18 +579,6 @@ set telemetry_disabled_esc_rpm = ON
 set telemetry_disabled_esc_temperature = ON
 set telemetry_disabled_temperature = OFF
 set telemetry_disabled_cap_used = ON
-# Skipped removed setting: set ledstrip_visual_beeper = OFF
-# Skipped removed setting: set ledstrip_visual_beeper_color = WHITE
-# Skipped removed setting: set ledstrip_grb_rgb = GRB
-# Skipped removed setting: set ledstrip_profile = STATUS
-# Skipped removed setting: set ledstrip_race_color = ORANGE
-# Skipped removed setting: set ledstrip_beacon_color = WHITE
-# Skipped removed setting: set ledstrip_beacon_period_ms = 500
-# Skipped removed setting: set ledstrip_beacon_percent = 50
-# Skipped removed setting: set ledstrip_beacon_armed_only = OFF
-# Skipped removed setting: set ledstrip_brightness = 100
-# Skipped removed setting: set ledstrip_rainbow_delta = 0
-# Skipped removed setting: set ledstrip_rainbow_freq = 120
 set osd_units = METRIC
 set osd_warn_bitmask = 270335
 set osd_rssi_alarm = 20
@@ -735,6 +597,7 @@ set osd_ah_max_rol = 40
 set osd_ah_invert = OFF
 set osd_logo_on_arming = OFF
 set osd_logo_on_arming_duration = 5
+set osd_arming_logo = 0
 set osd_tim1 = 2560
 set osd_tim2 = 2561
 set osd_vbat_pos = 512
@@ -773,6 +636,7 @@ set osd_pid_roll_pos = 341
 set osd_pid_pitch_pos = 341
 set osd_pid_yaw_pos = 341
 set osd_debug_pos = 242
+set osd_debug2_pos = 341
 set osd_power_pos = 341
 set osd_pidrate_profile_pos = 341
 set osd_warnings_pos = 14933
@@ -831,11 +695,8 @@ set osd_menu_background = TRANSPARENT
 set osd_aux_channel = 1
 set osd_aux_scale = 200
 set osd_aux_symbol = 65
-# Skipped removed setting: set osd_canvas_width = 53
-# Skipped removed setting: set osd_canvas_height = 20
 set osd_craftname_msgs = OFF
 set task_statistics = ON
-# Old: set debug_mode = GYRO_SCALED
 set debug_mode = GYRO_SAMPLE
 set rate_6pos_switch = OFF
 set cpu_overclock = OFF
@@ -850,10 +711,20 @@ set vtx_freq = 0
 set vtx_pit_mode_freq = 0
 set vtx_halfduplex = ON
 set vcd_video_system = HD
+set vcd_h_offset = 0
+set vcd_v_offset = 0
+set max7456_clock = NOMINAL
+set max7456_spi_bus = 1
+set max7456_preinit_opu = OFF
 set displayport_msp_col_adjust = 0
 set displayport_msp_row_adjust = 0
 set displayport_msp_fonts = 0,1,2,3
 set displayport_msp_use_device_blink = OFF
+set displayport_max7456_col_adjust = 0
+set displayport_max7456_row_adjust = 0
+set displayport_max7456_inv = OFF
+set displayport_max7456_blk = 0
+set displayport_max7456_wht = 2
 set esc_sensor_halfduplex = OFF
 set esc_sensor_current_offset = 0
 set led_inversion = 0
@@ -870,18 +741,10 @@ set gyro_1_bustype = SPI
 set gyro_1_spibus = 3
 set gyro_1_i2cBus = 0
 set gyro_1_i2c_address = 0
-# Skipped removed setting: set gyro_1_sensor_align = CW180
-# Skipped removed setting: set gyro_1_align_roll = 0
-# Skipped removed setting: set gyro_1_align_pitch = 0
-# Skipped removed setting: set gyro_1_align_yaw = 1800
 set gyro_2_bustype = SPI
 set gyro_2_spibus = 3
 set gyro_2_i2cBus = 0
 set gyro_2_i2c_address = 0
-# Skipped removed setting: set gyro_2_sensor_align = CW0
-# Skipped removed setting: set gyro_2_align_roll = 0
-# Skipped removed setting: set gyro_2_align_pitch = 0
-# Skipped removed setting: set gyro_2_align_yaw = 0
 set i2c1_pullup = OFF
 set i2c1_clockspeed_khz = 800
 set i2c2_pullup = OFF
@@ -891,6 +754,7 @@ set i2c3_clockspeed_khz = 800
 set mco2_on_pc9 = OFF
 set scheduler_relax_rx = 25
 set scheduler_relax_osd = 25
+set scheduler_debug_task = 0
 set cpu_late_limit_permille = 10
 set serialmsp_halfduplex = OFF
 set timezone_offset_minutes = 0
@@ -904,12 +768,27 @@ set stats_min_armed_time_s = -1
 set stats_total_flights = 0
 set stats_total_time_s = 0
 set stats_total_dist_m = 0
+set stats_save_move_limit = 20
 set craft_name = Vapor-D5
 set pilot_name = -
 set altitude_source = DEFAULT
 set altitude_prefer_baro = 100
 set altitude_lpf = 300
 set altitude_d_lpf = 100
+set ap_landing_altitude_m = 4
+set ap_hover_throttle = 1275
+set ap_throttle_min = 1100
+set ap_throttle_max = 1700
+set ap_altitude_p = 15
+set ap_altitude_i = 15
+set ap_altitude_d = 15
+set ap_altitude_f = 15
+set ap_position_p = 30
+set ap_position_i = 30
+set ap_position_d = 30
+set ap_position_a = 30
+set ap_position_cutoff = 80
+set ap_max_angle = 50
 set box_user_1_name = -
 set box_user_2_name = -
 set box_user_3_name = -
@@ -948,11 +827,7 @@ set iterm_rotation = OFF
 set iterm_relax = RP
 set iterm_relax_type = SETPOINT
 set iterm_relax_cutoff = 15
-set iterm_windup = 85
-# Old: set iterm_limit = 400
-# Approximation: old iterm_limit maps to percent of pidsum_limit.
 set iterm_windup = 80
-set pidsum_limit = 500
 set pidsum_limit = 500
 set pidsum_limit_yaw = 400
 set yaw_lowpass_hz = 100
@@ -986,9 +861,9 @@ set abs_control_error_limit = 20
 set abs_control_cutoff = 11
 set use_integrated_yaw = OFF
 set integrated_yaw_relax = 200
-# Skipped removed setting: set d_min_roll = 30
-# Skipped removed setting: set d_min_pitch = 43
-# Skipped removed setting: set d_min_yaw = 0
+set d_max_roll = 40
+set d_max_pitch = 46
+set d_max_yaw = 0
 set d_max_gain = 37
 set d_max_advance = 20
 set motor_output_limit = 100
@@ -1006,12 +881,12 @@ set feedforward_smooth_factor = 65
 set feedforward_jitter_factor = 7
 set feedforward_boost = 15
 set feedforward_max_rate_limit = 90
+set feedforward_yaw_hold_gain = 15
+set feedforward_yaw_hold_time = 100
 set dyn_idle_min_rpm = 38
 set dyn_idle_p_gain = 50
 set dyn_idle_i_gain = 50
 set dyn_idle_d_gain = 50
-set dyn_idle_max_increase = 150
-# Old: set dyn_idle_start_increase = 50
 set dyn_idle_max_increase = 50
 set level_race_mode = OFF
 set simplified_pids_mode = RP
@@ -1019,7 +894,6 @@ set simplified_master_multiplier = 120
 set simplified_i_gain = 105
 set simplified_d_gain = 85
 set simplified_pi_gain = 85
-# Old: set simplified_dmax_gain = 5
 set simplified_d_max_gain = 5
 set simplified_feedforward_gain = 75
 set simplified_pitch_d_gain = 125
@@ -1035,6 +909,7 @@ set tpa_low_always = OFF
 set ez_landing_threshold = 25
 set ez_landing_limit = 15
 set ez_landing_speed = 50
+set landing_disarm_threshold = 0
 
 profile 1
 
@@ -1069,11 +944,7 @@ set iterm_rotation = OFF
 set iterm_relax = RP
 set iterm_relax_type = SETPOINT
 set iterm_relax_cutoff = 15
-set iterm_windup = 85
-# Old: set iterm_limit = 400
-# Approximation: old iterm_limit maps to percent of pidsum_limit.
 set iterm_windup = 80
-set pidsum_limit = 500
 set pidsum_limit = 500
 set pidsum_limit_yaw = 400
 set yaw_lowpass_hz = 100
@@ -1081,11 +952,11 @@ set throttle_boost = 5
 set throttle_boost_cutoff = 15
 set p_pitch = 47
 set i_pitch = 84
-set d_pitch = 46
+set d_pitch = 34
 set f_pitch = 125
 set p_roll = 45
 set i_roll = 80
-set d_roll = 40
+set d_roll = 30
 set f_roll = 120
 set p_yaw = 45
 set i_yaw = 80
@@ -1107,14 +978,14 @@ set abs_control_error_limit = 20
 set abs_control_cutoff = 11
 set use_integrated_yaw = OFF
 set integrated_yaw_relax = 200
-# Skipped removed setting: set d_min_roll = 30
-# Skipped removed setting: set d_min_pitch = 34
-# Skipped removed setting: set d_min_yaw = 0
+set d_max_roll = 40
+set d_max_pitch = 46
+set d_max_yaw = 0
 set d_max_gain = 37
 set d_max_advance = 20
 set motor_output_limit = 100
 set auto_profile_cell_count = 0
-set launch_control_mode = NORMAL
+set launch_control_mode = PITCHONLY
 set launch_trigger_allow_reset = ON
 set launch_trigger_throttle_percent = 20
 set launch_angle_limit = 0
@@ -1122,25 +993,24 @@ set launch_control_gain = 40
 set thrust_linear = 0
 set transient_throttle_limit = 0
 set feedforward_transition = 0
-set feedforward_averaging = OFF
-set feedforward_smooth_factor = 25
+set feedforward_averaging = 2_POINT
+set feedforward_smooth_factor = 65
 set feedforward_jitter_factor = 7
 set feedforward_boost = 15
 set feedforward_max_rate_limit = 90
+set feedforward_yaw_hold_gain = 15
+set feedforward_yaw_hold_time = 100
 set dyn_idle_min_rpm = 0
 set dyn_idle_p_gain = 50
 set dyn_idle_i_gain = 50
 set dyn_idle_d_gain = 50
 set dyn_idle_max_increase = 150
-# Old: set dyn_idle_start_increase = 50
-set dyn_idle_max_increase = 50
 set level_race_mode = OFF
 set simplified_pids_mode = RPY
 set simplified_master_multiplier = 100
 set simplified_i_gain = 100
 set simplified_d_gain = 100
 set simplified_pi_gain = 100
-# Old: set simplified_dmax_gain = 100
 set simplified_d_max_gain = 100
 set simplified_feedforward_gain = 100
 set simplified_pitch_d_gain = 100
@@ -1156,6 +1026,7 @@ set tpa_low_always = OFF
 set ez_landing_threshold = 25
 set ez_landing_limit = 15
 set ez_landing_speed = 50
+set landing_disarm_threshold = 0
 
 profile 2
 
@@ -1190,11 +1061,7 @@ set iterm_rotation = OFF
 set iterm_relax = RP
 set iterm_relax_type = SETPOINT
 set iterm_relax_cutoff = 15
-set iterm_windup = 85
-# Old: set iterm_limit = 400
-# Approximation: old iterm_limit maps to percent of pidsum_limit.
 set iterm_windup = 80
-set pidsum_limit = 500
 set pidsum_limit = 500
 set pidsum_limit_yaw = 400
 set yaw_lowpass_hz = 100
@@ -1202,11 +1069,11 @@ set throttle_boost = 5
 set throttle_boost_cutoff = 15
 set p_pitch = 47
 set i_pitch = 84
-set d_pitch = 46
+set d_pitch = 34
 set f_pitch = 125
 set p_roll = 45
 set i_roll = 80
-set d_roll = 40
+set d_roll = 30
 set f_roll = 120
 set p_yaw = 45
 set i_yaw = 80
@@ -1228,14 +1095,14 @@ set abs_control_error_limit = 20
 set abs_control_cutoff = 11
 set use_integrated_yaw = OFF
 set integrated_yaw_relax = 200
-# Skipped removed setting: set d_min_roll = 30
-# Skipped removed setting: set d_min_pitch = 34
-# Skipped removed setting: set d_min_yaw = 0
+set d_max_roll = 40
+set d_max_pitch = 46
+set d_max_yaw = 0
 set d_max_gain = 37
 set d_max_advance = 20
 set motor_output_limit = 100
 set auto_profile_cell_count = 0
-set launch_control_mode = NORMAL
+set launch_control_mode = PITCHONLY
 set launch_trigger_allow_reset = ON
 set launch_trigger_throttle_percent = 20
 set launch_angle_limit = 0
@@ -1243,25 +1110,24 @@ set launch_control_gain = 40
 set thrust_linear = 0
 set transient_throttle_limit = 0
 set feedforward_transition = 0
-set feedforward_averaging = OFF
-set feedforward_smooth_factor = 25
+set feedforward_averaging = 2_POINT
+set feedforward_smooth_factor = 65
 set feedforward_jitter_factor = 7
 set feedforward_boost = 15
 set feedforward_max_rate_limit = 90
+set feedforward_yaw_hold_gain = 15
+set feedforward_yaw_hold_time = 100
 set dyn_idle_min_rpm = 0
 set dyn_idle_p_gain = 50
 set dyn_idle_i_gain = 50
 set dyn_idle_d_gain = 50
 set dyn_idle_max_increase = 150
-# Old: set dyn_idle_start_increase = 50
-set dyn_idle_max_increase = 50
 set level_race_mode = OFF
 set simplified_pids_mode = RPY
 set simplified_master_multiplier = 100
 set simplified_i_gain = 100
 set simplified_d_gain = 100
 set simplified_pi_gain = 100
-# Old: set simplified_dmax_gain = 100
 set simplified_d_max_gain = 100
 set simplified_feedforward_gain = 100
 set simplified_pitch_d_gain = 100
@@ -1277,6 +1143,7 @@ set tpa_low_always = OFF
 set ez_landing_threshold = 25
 set ez_landing_limit = 15
 set ez_landing_speed = 50
+set landing_disarm_threshold = 0
 
 profile 3
 
@@ -1311,11 +1178,7 @@ set iterm_rotation = OFF
 set iterm_relax = RP
 set iterm_relax_type = SETPOINT
 set iterm_relax_cutoff = 15
-set iterm_windup = 85
-# Old: set iterm_limit = 400
-# Approximation: old iterm_limit maps to percent of pidsum_limit.
 set iterm_windup = 80
-set pidsum_limit = 500
 set pidsum_limit = 500
 set pidsum_limit_yaw = 400
 set yaw_lowpass_hz = 100
@@ -1323,11 +1186,11 @@ set throttle_boost = 5
 set throttle_boost_cutoff = 15
 set p_pitch = 47
 set i_pitch = 84
-set d_pitch = 46
+set d_pitch = 34
 set f_pitch = 125
 set p_roll = 45
 set i_roll = 80
-set d_roll = 40
+set d_roll = 30
 set f_roll = 120
 set p_yaw = 45
 set i_yaw = 80
@@ -1349,14 +1212,14 @@ set abs_control_error_limit = 20
 set abs_control_cutoff = 11
 set use_integrated_yaw = OFF
 set integrated_yaw_relax = 200
-# Skipped removed setting: set d_min_roll = 30
-# Skipped removed setting: set d_min_pitch = 34
-# Skipped removed setting: set d_min_yaw = 0
+set d_max_roll = 40
+set d_max_pitch = 46
+set d_max_yaw = 0
 set d_max_gain = 37
 set d_max_advance = 20
 set motor_output_limit = 100
 set auto_profile_cell_count = 0
-set launch_control_mode = NORMAL
+set launch_control_mode = PITCHONLY
 set launch_trigger_allow_reset = ON
 set launch_trigger_throttle_percent = 20
 set launch_angle_limit = 0
@@ -1364,25 +1227,24 @@ set launch_control_gain = 40
 set thrust_linear = 0
 set transient_throttle_limit = 0
 set feedforward_transition = 0
-set feedforward_averaging = OFF
-set feedforward_smooth_factor = 25
+set feedforward_averaging = 2_POINT
+set feedforward_smooth_factor = 65
 set feedforward_jitter_factor = 7
 set feedforward_boost = 15
 set feedforward_max_rate_limit = 90
+set feedforward_yaw_hold_gain = 15
+set feedforward_yaw_hold_time = 100
 set dyn_idle_min_rpm = 0
 set dyn_idle_p_gain = 50
 set dyn_idle_i_gain = 50
 set dyn_idle_d_gain = 50
 set dyn_idle_max_increase = 150
-# Old: set dyn_idle_start_increase = 50
-set dyn_idle_max_increase = 50
 set level_race_mode = OFF
 set simplified_pids_mode = RPY
 set simplified_master_multiplier = 100
 set simplified_i_gain = 100
 set simplified_d_gain = 100
 set simplified_pi_gain = 100
-# Old: set simplified_dmax_gain = 100
 set simplified_d_max_gain = 100
 set simplified_feedforward_gain = 100
 set simplified_pitch_d_gain = 100
@@ -1398,6 +1260,7 @@ set tpa_low_always = OFF
 set ez_landing_threshold = 25
 set ez_landing_limit = 15
 set ez_landing_speed = 50
+set landing_disarm_threshold = 0
 
 # restore original profile selection
 profile 0
@@ -1405,20 +1268,21 @@ profile 0
 rateprofile 0
 
 # rateprofile 0
-set rateprofile_name = Fiesty
+set rateprofile_name = -
 set thr_mid = 50
 set thr_expo = 0
+set thr_hover = 50
 set rates_type = ACTUAL
 set quickrates_rc_expo = OFF
-set roll_rc_rate = 85
-set pitch_rc_rate = 85
-set yaw_rc_rate = 85
-set roll_expo = 20
-set pitch_expo = 20
-set yaw_expo = 15
-set roll_srate = 80
-set pitch_srate = 80
-set yaw_srate = 80
+set roll_rc_rate = 7
+set pitch_rc_rate = 7
+set yaw_rc_rate = 7
+set roll_expo = 0
+set pitch_expo = 0
+set yaw_expo = 0
+set roll_srate = 67
+set pitch_srate = 67
+set yaw_srate = 67
 set throttle_limit_type = OFF
 set throttle_limit_percent = 100
 set roll_rate_limit = 1998
@@ -1428,14 +1292,15 @@ set yaw_rate_limit = 1998
 rateprofile 1
 
 # rateprofile 1
-set rateprofile_name = Default
+set rateprofile_name = -
 set thr_mid = 50
 set thr_expo = 0
+set thr_hover = 50
 set rates_type = ACTUAL
 set quickrates_rc_expo = OFF
-set roll_rc_rate = 10
-set pitch_rc_rate = 10
-set yaw_rc_rate = 10
+set roll_rc_rate = 7
+set pitch_rc_rate = 7
+set yaw_rc_rate = 7
 set roll_expo = 0
 set pitch_expo = 0
 set yaw_expo = 0
@@ -1454,6 +1319,7 @@ rateprofile 2
 set rateprofile_name = Smooth
 set thr_mid = 50
 set thr_expo = 0
+set thr_hover = 50
 set rates_type = ACTUAL
 set quickrates_rc_expo = OFF
 set roll_rc_rate = 5
@@ -1477,6 +1343,7 @@ rateprofile 3
 set rateprofile_name = -
 set thr_mid = 50
 set thr_expo = 0
+set thr_hover = 50
 set rates_type = ACTUAL
 set quickrates_rc_expo = OFF
 set roll_rc_rate = 7

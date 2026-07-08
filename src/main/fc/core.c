@@ -28,6 +28,9 @@
 
 #include "blackbox/blackbox.h"
 #include "blackbox/blackbox_fielddefs.h"
+#ifdef USE_EVENTLOG
+#include "eventlog/eventlog.h"
+#endif
 
 #include "build/debug.h"
 
@@ -516,6 +519,9 @@ void disarm(flightLogDisarmReason_e reason)
         }
 #else
         UNUSED(reason);
+#endif
+#ifdef USE_EVENTLOG
+        eventlogFlush();
 #endif
 
         BEEP_OFF;
@@ -1265,6 +1271,9 @@ static FAST_CODE_NOINLINE void subTaskPidSubprocesses(timeUs_t currentTimeUs)
     }
 #else
     UNUSED(currentTimeUs);
+#endif
+#ifdef USE_EVENTLOG
+    eventlogUpdate(currentTimeUs);
 #endif
 
     DEBUG_SET(DEBUG_PIDLOOP, 3, micros() - startTime);

@@ -601,6 +601,28 @@ static void flashConfigurePartitions(void)
     startSector = 0;
 #endif
 
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+#ifndef EVENTLOG_FLASH_SIZE_KB
+#define EVENTLOG_FLASH_SIZE_KB 256
+#endif
+    const uint32_t eventlogSize = EVENTLOG_FLASH_SIZE_KB * 1024;
+    flashSector_t eventlogSectors = (eventlogSize / flashGeometry->sectorSize);
+
+    if (eventlogSize % flashGeometry->sectorSize > 0) {
+        eventlogSectors++;
+    }
+
+    // Keep sector 0 for FLASHFS/blackbox; allocate eventlog from the high end.
+    if (eventlogSectors > 0 && endSector >= eventlogSectors) {
+        startSector = (endSector + 1) - eventlogSectors; // + 1 for inclusive
+
+        flashPartitionSet(FLASH_PARTITION_TYPE_EVENTLOG, startSector, endSector);
+
+        endSector = startSector - 1;
+        startSector = 0;
+    }
+#endif
+
 #ifdef USE_FLASHFS
     flashPartitionSet(FLASH_PARTITION_TYPE_FLASHFS, startSector, endSector);
 #endif
@@ -651,6 +673,7 @@ static const char *flashPartitionNames[] = {
     "BBMGMT   ",
     "FIRMWARE ",
     "CONFIG   ",
+    "EVENTLOG ",
 };
 
 const char *flashPartitionGetTypeName(flashPartitionType_e type)

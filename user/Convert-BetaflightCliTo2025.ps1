@@ -38,12 +38,21 @@ $removedSettings = @(
 $removedPrefixes = @(
     'gps_',
     'gps_rescue_',
+    'ledstrip_',
     'gyro_1_align_',
     'gyro_2_align_'
 )
 
 $featureSkips = @(
-    'RX_MSP'
+    'RX_MSP',
+    'SOFTSERIAL',
+    'GPS',
+    'RANGEFINDER',
+    'RX_PARALLEL_PWM',
+    'LED_STRIP',
+    'DISPLAY',
+    'TRANSPONDER',
+    'RX_SPI'
 )
 
 $beeperRenameMap = @{
@@ -128,9 +137,18 @@ foreach ($line in $inputLines) {
         }
     }
 
-    if ($line -match '^resource\s+SERIAL_(TX|RX)\s+(7|8|9|10)\s+' -or
+    if ($line -match '^resource\s+LED_STRIP\s+' -or
+        $line -match '^resource\s+SERIAL_(TX|RX)\s+(7|8|9|10)\s+' -or
         $line -match '^resource\s+SOFTSERIAL_(TX|RX)\s+') {
         Add-OutputLine -Lines $outputLines -Line "# Skipped target-specific resource line: $line"
+        continue
+    }
+
+    if ($line -match '^dma\s+UART_(TX|RX)\s+(7|8|9|10|11)\s+' -or
+        $line -match '^led\b' -or
+        $line -match '^color\b' -or
+        $line -match '^mode_color\b') {
+        Add-OutputLine -Lines $outputLines -Line "# Skipped unavailable LED/target command: $line"
         continue
     }
 
