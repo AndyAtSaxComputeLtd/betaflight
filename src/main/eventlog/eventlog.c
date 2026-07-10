@@ -75,6 +75,7 @@
 #endif
 
 #include "pg/beeper.h"
+#include "pg/eventlog.h"
 #include "sensors/battery.h"
 
 #ifdef USE_RTC_TIME
@@ -261,6 +262,10 @@ static void eventlogFlushPending(void)
 
 void eventlogAdd(const char *event, const char *detail)
 {
+    if (!eventlogConfig()->enabled) {
+        return;
+    }
+
     if (!eventlogReady) {
         eventlogQueue(event, detail);
         return;
@@ -348,6 +353,14 @@ static void eventlogResumeCountersFromFlash(void)
 
 void eventlogInit(void)
 {
+    if (!eventlogConfig()->enabled) {
+        eventlogBackend = EVENTLOG_BACKEND_NONE;
+        eventlogReady = false;
+        eventlogPendingHead = 0;
+        eventlogPendingCount = 0;
+        return;
+    }
+
 #ifdef USE_SDCARD
     eventlogFile = NULL;
     eventlogOpening = false;
@@ -520,7 +533,7 @@ void eventlogClose(void)
 static void eventlogWriteLine(const char *event, const char *detail,
                                timeMs_t nowMs)
 {
-    if (!eventlogReady) {
+    if (!eventlogConfig()->enabled || !eventlogReady) {
         return;
     }
 
@@ -645,6 +658,10 @@ static const char *eventlogBeeperModeName(beeperMode_e mode)
 
 void eventlogUpdate(timeUs_t currentTimeUs)
 {
+    if (!eventlogConfig()->enabled) {
+        return;
+    }
+
     // Drive the async file-open state machine until the file is ready.
     if (!eventlogReady) {
 #ifdef USE_SDCARD
@@ -753,18 +770,21 @@ void eventlogUpdate(timeUs_t currentTimeUs)
     // GPS FIX CHANGE
     // -----------------------------------------------------------------------
 #ifdef USE_GPS
+    const bool gpsLoggingEnabled = eventlogConfig()->gpsLoggingEnabled;
     const bool gpsFix = STATE(GPS_FIX);
-    if (gpsFix != lastGpsFix) {
+    if (gpsLoggingEnabled && gpsFix != lastGpsFix) {
         char detail[32];
         tfp_sprintf(detail, "sats=%u", (unsigned)gpsSol.numSat);
         eventlogWriteLine(gpsFix ? "GPS_FIX" : "GPS_LOST", detail, nowMs);
+        lastGpsFix = gpsFix;
+    } else if (!gpsLoggingEnabled) {
         lastGpsFix = gpsFix;
     }
 
     // -----------------------------------------------------------------------
     // GPS POSITION — rate-limited 1/sec when armed and fix available
     // -----------------------------------------------------------------------
-    if (armed && gpsFix && nowMs >= nextGpsLogMs) {
+    if (gpsLoggingEnabled && armed && gpsFix && nowMs >= nextGpsLogMs) {
         char detail[48];
         tfp_sprintf(detail, "sats=%u alt=%ldcm spd=%u",
                  (unsigned)gpsSol.numSat,

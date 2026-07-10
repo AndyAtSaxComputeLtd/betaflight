@@ -46,6 +46,7 @@
 #include "fc/runtime_config.h"
 
 #include "flight/autopilot.h"
+#include "flight/auto_acro.h"
 #include "flight/gps_rescue.h"
 #include "flight/imu.h"
 #include "flight/mixer.h"
@@ -1199,6 +1200,10 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 
     rotateItermAndAxisError();
 
+#ifdef USE_AUTOACRO
+    autoAcroUpdate(gyro.gyroADCf, pidRuntime.dT);
+#endif
+
 #ifdef USE_RPM_FILTER
     rpmFilterUpdate();
 #endif
@@ -1297,6 +1302,13 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 #else
             currentPidSetpoint = applyLaunchControl(axis, NULL);
 #endif
+        }
+#endif
+
+#ifdef USE_AUTOACRO
+        float autoAcroSetpoint;
+        if (autoAcroGetSetpoint(axis, &autoAcroSetpoint)) {
+            currentPidSetpoint = autoAcroSetpoint;
         }
 #endif
 

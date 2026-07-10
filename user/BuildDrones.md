@@ -15,3 +15,6 @@ make --no-print-directory fwo CONFIG=GEPRCF722 OPTIONS="USE_SERIALRX_CRSF USE_TE
 
 # Convert config
 pwsh -NoLogo -NoProfile -File user/Convert-BetaflightCliTo2025.ps1 -InputPath user/BTFL_cli_VAPOR-D5_20260703_134740_GEPRCF722_Dump_All.txt -OutputPath user/BTFL_cli_VAPOR-D5_20260703_134740_GEPRCF722_Dump_All_2025.txt
+
+# Serial Passthrough
+serialpassthrough 30 19200 rxtx

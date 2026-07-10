@@ -26,6 +26,8 @@
 #include "common/maths.h"
 #include "drivers/flash/flash.h"
 
+#include "pg/eventlog.h"
+
 #include "eventlog/eventlog_flash.h"
 
 #define EVENTLOG_FREE_BLOCK_SIZE 2048
@@ -112,7 +114,9 @@ bool eventlogFlashInit(void)
     }
 
     eventlogStartAddress = eventlogPartition->startSector * eventlogFlashGeometry->sectorSize;
-    eventlogSize = FLASH_PARTITION_SECTOR_COUNT(eventlogPartition) * eventlogFlashGeometry->sectorSize;
+    const uint32_t partitionSize = FLASH_PARTITION_SECTOR_COUNT(eventlogPartition) * eventlogFlashGeometry->sectorSize;
+    const uint32_t configuredSize = eventlogConfig()->sizeKb * 1024UL;
+    eventlogSize = configuredSize > 0 ? MIN(partitionSize, configuredSize) : partitionSize;
     eventlogTailAddress = eventlogFlashFindStartOfFreeSpace();
 
     return eventlogSize > 0;

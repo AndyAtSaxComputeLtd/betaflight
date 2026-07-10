@@ -140,6 +140,9 @@ bool cliMode = false;
 #include "pg/board.h"
 #include "pg/bus_i2c.h"
 #include "pg/bus_spi.h"
+#ifdef USE_EVENTLOG
+#include "pg/eventlog.h"
+#endif
 #include "pg/gyrodev.h"
 #include "pg/max7456.h"
 #include "pg/mco.h"
@@ -2688,17 +2691,94 @@ static void cliEventlogClear(void)
     }
 }
 
+static bool cliEventlogParseOnOff(const char *value, bool *enabled)
+{
+    if (!value || !enabled) {
+        return false;
+    }
+
+    if (strcasecmp(value, "on") == 0 || strcasecmp(value, "enable") == 0 || strcasecmp(value, "enabled") == 0 || strcmp(value, "1") == 0) {
+        *enabled = true;
+        return true;
+    }
+
+    if (strcasecmp(value, "off") == 0 || strcasecmp(value, "disable") == 0 || strcasecmp(value, "disabled") == 0 || strcmp(value, "0") == 0) {
+        *enabled = false;
+        return true;
+    }
+
+    return false;
+}
+
+static void cliEventlogStatus(void)
+{
+    cliPrintLinef("Event log enabled=%u gps=%u sizeKb=%u",
+        eventlogConfig()->enabled ? 1 : 0,
+        eventlogConfig()->gpsLoggingEnabled ? 1 : 0,
+        (unsigned)eventlogConfig()->sizeKb);
+
+    if (eventlogFlashInit()) {
+        cliPrintLinef("Event log flash size=%u usedSize=%u",
+            (unsigned)eventlogFlashGetSize(),
+            (unsigned)eventlogFlashGetUsedSize());
+    } else {
+        cliPrintLine("Event log flash is not available.");
+    }
+}
+
 static void cliEventlog(const char *cmdName, char *cmdline)
 {
     if (isEmpty(cmdline)) {
-        cliPrintLine("Available subcommands: dump, clear");
+        cliPrintLine("Available subcommands: status, dump, clear, enable, disable, size <kb>, gps <on|off>");
         return;
     }
 
-    if (strcasecmp(cmdline, "dump") == 0) {
+    char *saveptr = NULL;
+    char *subcommand = strtok_r(cmdline, " ", &saveptr);
+    char *argument = strtok_r(NULL, " ", &saveptr);
+
+    if (strcasecmp(subcommand, "status") == 0) {
+        cliEventlogStatus();
+    } else if (strcasecmp(subcommand, "dump") == 0) {
         cliEventlogDump();
-    } else if (strcasecmp(cmdline, "clear") == 0) {
+    } else if (strcasecmp(subcommand, "clear") == 0) {
         cliEventlogClear();
+    } else if (strcasecmp(subcommand, "enable") == 0) {
+        const bool wasEnabled = eventlogConfig()->enabled;
+        eventlogConfigMutable()->enabled = true;
+        if (!wasEnabled) {
+            eventlogInit();
+        }
+        setConfigDirty();
+        cliPrintLine("Event log enabled. Use save to persist.");
+    } else if (strcasecmp(subcommand, "disable") == 0) {
+        const bool wasEnabled = eventlogConfig()->enabled;
+        eventlogConfigMutable()->enabled = false;
+        if (wasEnabled) {
+            eventlogClose();
+        }
+        setConfigDirty();
+        cliPrintLine("Event log disabled. Use save to persist.");
+    } else if (strcasecmp(subcommand, "size") == 0) {
+        if (!argument) {
+            cliPrintLinef("Event log sizeKb=%u", (unsigned)eventlogConfig()->sizeKb);
+            return;
+        }
+
+        const uint16_t sizeKb = constrain(atoi(argument), 16, 4096);
+        eventlogConfigMutable()->sizeKb = sizeKb;
+        setConfigDirty();
+        cliPrintLinef("Event log sizeKb=%u. Use save, reboot, and clear the event log before relying on the new size.", (unsigned)sizeKb);
+    } else if (strcasecmp(subcommand, "gps") == 0) {
+        bool enabled = false;
+        if (!cliEventlogParseOnOff(argument, &enabled)) {
+            cliPrintErrorLinef(cmdName, "EXPECTED gps <on|off>");
+            return;
+        }
+
+        eventlogConfigMutable()->gpsLoggingEnabled = enabled;
+        setConfigDirty();
+        cliPrintLinef("Event log GPS logging %s. Use save to persist.", enabled ? "enabled" : "disabled");
     } else {
         cliPrintErrorLinef(cmdName, "UNKNOWN SUBCOMMAND");
     }
@@ -6768,7 +6848,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("escprog", "passthrough esc to serial", "<mode [sk/bl/ki/cc]> <index>", cliEscPassthrough),
 #endif
 #if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
-    CLI_COMMAND_DEF("eventlog", "custom event log", "dump | clear", cliEventlog),
+    CLI_COMMAND_DEF("eventlog", "custom event log", "status | dump | clear | enable | disable | size <kb> | gps <on|off>", cliEventlog),
 #endif
     CLI_COMMAND_DEF("exit", "exit command line interface and reboot (default)", "[noreboot]", cliExitCmd),
     CLI_COMMAND_DEF("feature", "configure features",

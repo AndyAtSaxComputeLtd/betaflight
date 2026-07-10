@@ -41,6 +41,7 @@
 #include "fc/runtime_config.h"
 
 #include "flight/failsafe.h"
+#include "flight/auto_acro.h"
 #include "flight/imu.h"
 #include "flight/gps_rescue.h"
 #include "flight/pid.h"
@@ -742,6 +743,12 @@ FAST_CODE_NOINLINE void updateRcCommands(void)
             }
         }
     }
+#ifdef USE_AUTOACRO
+    autoAcroUpdateTriggers();
+    if (autoAcroShouldOverrideThrottle()) {
+        rcCommand[THROTTLE] = autoAcroGetThrottle();
+    }
+#endif
     if (FLIGHT_MODE(HEADFREE_MODE)) {
         static vector3_t rcCommandBuff;
 
