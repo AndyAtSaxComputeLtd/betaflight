@@ -41,6 +41,7 @@
 #include "common/axis.h"
 #include "common/filter.h"
 #include "common/maths.h"
+#include "common/printf.h"
 #include "common/utils.h"
 
 #include "config/config.h"
@@ -163,6 +164,29 @@ static timeUs_t runawayTakeoffAccumulatedUs = 0;
 static bool runawayTakeoffCheckDisabled = false;
 static timeUs_t runawayTakeoffTriggerUs = 0;
 static bool runawayTakeoffTemporarilyDisabled = false;
+#endif
+
+#ifdef USE_EVENTLOG
+static const char *disarmReasonName(flightLogDisarmReason_e reason)
+{
+    switch (reason) {
+    case DISARM_REASON_ARMING_DISABLED: return "ARMING_DISABLED";
+    case DISARM_REASON_FAILSAFE: return "FAILSAFE";
+    case DISARM_REASON_THROTTLE_TIMEOUT: return "THROTTLE_TIMEOUT";
+    case DISARM_REASON_STICKS: return "STICKS";
+    case DISARM_REASON_SWITCH: return "SWITCH";
+    case DISARM_REASON_CRASH_PROTECTION: return "CRASH_PROTECTION";
+    case DISARM_REASON_RUNAWAY_TAKEOFF: return "RUNAWAY_TAKEOFF";
+    case DISARM_REASON_GPS_RESCUE: return "GPS_RESCUE";
+    case DISARM_REASON_SERIAL_COMMAND: return "SERIAL_COMMAND";
+    case DISARM_REASON_LANDING: return "LANDING";
+    case DISARM_REASON_CRASHFLIP: return "CRASHFLIP";
+#ifdef UNIT_TEST
+    case DISARM_REASON_SYSTEM: return "SYSTEM";
+#endif
+    default: return "UNKNOWN";
+    }
+}
 #endif
 
 #ifdef USE_LAUNCH_CONTROL
@@ -521,6 +545,9 @@ void disarm(flightLogDisarmReason_e reason)
         UNUSED(reason);
 #endif
 #ifdef USE_EVENTLOG
+        char detail[48];
+        tfp_sprintf(detail, "reason=%s", disarmReasonName(reason));
+        eventlogAdd("DISARM", detail);
         eventlogFlush();
 #endif
 
@@ -671,6 +698,14 @@ if (isMotorProtocolDshot()) {
             if (lastArmingDisabledReason != armingDisabledReason) {
                 lastArmingDisabledReason = armingDisabledReason;
 
+#ifdef USE_EVENTLOG
+                if (armingDisabledReason > 0) {
+                    char detail[48];
+                    const armingDisableFlags_e flag = 1 << (armingDisabledReason - 1);
+                    tfp_sprintf(detail, "active=%s", getArmingDisableFlagName(flag));
+                    eventlogAdd("ARMING_WARNING", detail);
+                }
+#endif
                 beeperWarningBeeps(armingDisabledReason);
             }
         }
@@ -1229,7 +1264,29 @@ static FAST_CODE_NOINLINE void subTaskPidController(timeUs_t currentTimeUs)
 
             if (runawayTakeoffTriggerUs == 0) {
                 runawayTakeoffTriggerUs = currentTimeUs + RUNAWAY_TAKEOFF_ACTIVATE_DELAY;
+#ifdef USE_EVENTLOG
+                char detail[96];
+                tfp_sprintf(detail, "PENDING ps=%d rs=%d ys=%d pg=%d rg=%d yg=%d",
+                    (int)lrintf(pidData[FD_PITCH].Sum),
+                    (int)lrintf(pidData[FD_ROLL].Sum),
+                    (int)lrintf(pidData[FD_YAW].Sum),
+                    (int)lrintf(gyroAbsRateDps(FD_PITCH)),
+                    (int)lrintf(gyroAbsRateDps(FD_ROLL)),
+                    (int)lrintf(gyroAbsRateDps(FD_YAW)));
+                eventlogAdd("RUNAWAY", detail);
+#endif
             } else if (currentTimeUs > runawayTakeoffTriggerUs) {
+#ifdef USE_EVENTLOG
+                char detail[96];
+                tfp_sprintf(detail, "TRIGGER ps=%d rs=%d ys=%d pg=%d rg=%d yg=%d",
+                    (int)lrintf(pidData[FD_PITCH].Sum),
+                    (int)lrintf(pidData[FD_ROLL].Sum),
+                    (int)lrintf(pidData[FD_YAW].Sum),
+                    (int)lrintf(gyroAbsRateDps(FD_PITCH)),
+                    (int)lrintf(gyroAbsRateDps(FD_ROLL)),
+                    (int)lrintf(gyroAbsRateDps(FD_YAW)));
+                eventlogAdd("RUNAWAY", detail);
+#endif
                 setArmingDisabled(ARMING_DISABLED_RUNAWAY_TAKEOFF);
                 disarm(DISARM_REASON_RUNAWAY_TAKEOFF);
             }

@@ -47,6 +47,9 @@
 #include "fc/runtime_config.h"
 
 #include "flight/failsafe.h"
+#ifdef USE_AUTOACRO
+#include "flight/auto_acro.h"
+#endif
 #include "flight/gps_rescue.h"
 #include "flight/imu.h"
 #include "flight/mixer.h"
@@ -72,28 +75,34 @@ MAYBE_UNUSED static const char WARNING_TEXT_ESC_PREFIX[] = "ESC";
 MAYBE_UNUSED static const char WARNING_TEXT_ESC_MOTOR_ALARM[] = " %d%s";
 MAYBE_UNUSED static const char WARNING_TEXT_DSHOT_BEACON[] = " BEEPING";
 MAYBE_UNUSED static const char WARNING_TEXT_DSHOT_ARM_DELAY[] = "WAIT %d.%d";
-MAYBE_UNUSED static const char WARNING_TEXT_FAIL_SAFE[] = "NOPE LINK";
-MAYBE_UNUSED static const char WARNING_TEXT_CRASHFLIP[] = ">SHIT PILOT<";
-MAYBE_UNUSED static const char WARNING_TEXT_CRASHFLIP_SWITCH[] = "SHIT PILOT SW";
-MAYBE_UNUSED static const char WARNING_TEXT_LAUNCH_ANGLE[] = "SEND IT %d";
-MAYBE_UNUSED static const char WARNING_TEXT_LAUNCH[] = "SEND IT";
-MAYBE_UNUSED static const char WARNING_TEXT_RSSI_LOW[] = "SIGNAL SAD";
-MAYBE_UNUSED static const char WARNING_TEXT_RSSI_DBM[] = "DBM SAD";
-MAYBE_UNUSED static const char WARNING_TEXT_RSNR_LOW[] = "NOISE WON";
-MAYBE_UNUSED static const char WARNING_TEXT_LINK_QUALITY[] = "LINK SKETCHY";
-MAYBE_UNUSED static const char WARNING_TEXT_LAND_NOW[] = "OUT OF FUEL";
-MAYBE_UNUSED static const char WARNING_TEXT_CPU_OVERLOAD[] = "CPU SWEATING";
-MAYBE_UNUSED static const char WARNING_TEXT_RESCUE_UNAVAILABLE[] = "YOUR ON YOUR OWN";
-MAYBE_UNUSED static const char WARNING_TEXT_RESCUE_OFF[] = "RESCUE NOPE";
-MAYBE_UNUSED static const char WARNING_TEXT_POSHOLD_FAIL[] = "POSHOLD LOL";
-MAYBE_UNUSED static const char WARNING_TEXT_HEADFREE[] = "BRAIN OFF";
-MAYBE_UNUSED static const char WARNING_TEXT_CORE_TEMPERATURE[] = "SPICY %c:%3d%c";
-MAYBE_UNUSED static const char WARNING_TEXT_LOW_BATTERY[] = "JUICE LOW";
-MAYBE_UNUSED static const char WARNING_TEXT_OVER_CAP[] = "MAH OOPS";
-MAYBE_UNUSED static const char WARNING_TEXT_BATTERY_CONTINUE[] = "USED JUICE";
-MAYBE_UNUSED static const char WARNING_TEXT_BATTERY_NOT_FULL[] = "HALF TANK";
-MAYBE_UNUSED static const char WARNING_TEXT_VISUAL_BEEPER[] = "  PANIC";
-MAYBE_UNUSED static const char WARNING_TEXT_CHIRP_EXC_FINISHED[] = "CHIRP DONE";
+MAYBE_UNUSED static const char WARNING_TEXT_FAIL_SAFE[] = "FAIL SAFE";
+#ifdef USE_AUTOACRO
+MAYBE_UNUSED static const char WARNING_TEXT_AUTO_ACRO_ROLL[] = "AUTO ROLL";
+MAYBE_UNUSED static const char WARNING_TEXT_AUTO_ACRO_FLIP[] = "AUTO FLIP";
+MAYBE_UNUSED static const char WARNING_TEXT_AUTO_ACRO_POWER_LOOP[] = "AUTO POWER LOOP";
+MAYBE_UNUSED static const char WARNING_TEXT_AUTO_ACRO_YAW[] = "AUTO YAW";
+#endif
+MAYBE_UNUSED static const char WARNING_TEXT_CRASHFLIP[] = "CRASH FLIP";
+MAYBE_UNUSED static const char WARNING_TEXT_CRASHFLIP_SWITCH[] = "FLIP SWITCH";
+MAYBE_UNUSED static const char WARNING_TEXT_LAUNCH_ANGLE[] = "LAUNCH %d";
+MAYBE_UNUSED static const char WARNING_TEXT_LAUNCH[] = "LAUNCH";
+MAYBE_UNUSED static const char WARNING_TEXT_RSSI_LOW[] = "RSSI LOW";
+MAYBE_UNUSED static const char WARNING_TEXT_RSSI_DBM[] = "RSSI DBM";
+MAYBE_UNUSED static const char WARNING_TEXT_RSNR_LOW[] = "RSNR LOW";
+MAYBE_UNUSED static const char WARNING_TEXT_LINK_QUALITY[] = "LINK QUALITY";
+MAYBE_UNUSED static const char WARNING_TEXT_LAND_NOW[] = "LAND NOW";
+MAYBE_UNUSED static const char WARNING_TEXT_CPU_OVERLOAD[] = "CPU OVERLOAD";
+MAYBE_UNUSED static const char WARNING_TEXT_RESCUE_UNAVAILABLE[] = "RESCUE N/A";
+MAYBE_UNUSED static const char WARNING_TEXT_RESCUE_OFF[] = "RESCUE OFF";
+MAYBE_UNUSED static const char WARNING_TEXT_POSHOLD_FAIL[] = "POSHOLD FAIL";
+MAYBE_UNUSED static const char WARNING_TEXT_HEADFREE[] = "HEADFREE";
+MAYBE_UNUSED static const char WARNING_TEXT_CORE_TEMPERATURE[] = "CORE %c:%3d%c";
+MAYBE_UNUSED static const char WARNING_TEXT_LOW_BATTERY[] = "LOW BATTERY";
+MAYBE_UNUSED static const char WARNING_TEXT_OVER_CAP[] = "OVER CAP";
+MAYBE_UNUSED static const char WARNING_TEXT_BATTERY_CONTINUE[] = "BATTERY CONTINUE";
+MAYBE_UNUSED static const char WARNING_TEXT_BATTERY_NOT_FULL[] = "BATTERY NOT FULL";
+MAYBE_UNUSED static const char WARNING_TEXT_VISUAL_BEEPER[] = "  BEEPER";
+MAYBE_UNUSED static const char WARNING_TEXT_CHIRP_EXC_FINISHED[] = "CHIRP FINISHED";
 
 #if defined(USE_ESC_SENSOR) || (defined(USE_DSHOT) && defined(USE_DSHOT_TELEMETRY))
 // ESC alarm character constants
@@ -259,6 +268,30 @@ void renderOsdWarning(char *warningText, bool *blinking, uint8_t *displayAttr)
         *blinking = true;
         return;
     }
+
+#ifdef USE_AUTOACRO
+    switch (autoAcroGetManeuver()) {
+    case AUTO_ACRO_MANEUVER_ROLL:
+        tfp_sprintf(warningText, WARNING_TEXT_AUTO_ACRO_ROLL);
+        break;
+    case AUTO_ACRO_MANEUVER_FLIP:
+        tfp_sprintf(warningText, WARNING_TEXT_AUTO_ACRO_FLIP);
+        break;
+    case AUTO_ACRO_MANEUVER_POWER_LOOP:
+        tfp_sprintf(warningText, WARNING_TEXT_AUTO_ACRO_POWER_LOOP);
+        break;
+    case AUTO_ACRO_MANEUVER_YAW:
+        tfp_sprintf(warningText, WARNING_TEXT_AUTO_ACRO_YAW);
+        break;
+    default:
+        break;
+    }
+
+    if (warningText[0] != '\0') {
+        *displayAttr = DISPLAYPORT_SEVERITY_CRITICAL;
+        return;
+    }
+#endif
 
 #ifdef USE_ESC_SENSOR
     // Show warning if we lose motor output, the ESC is overheating or excessive current draw

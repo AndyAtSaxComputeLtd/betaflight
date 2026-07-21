@@ -26,17 +26,26 @@
 
 #include "pg/pg.h"
 
+typedef enum {
+    AUTO_ACRO_HIGH_POWER_LOOP = 0,
+    AUTO_ACRO_HIGH_YAW,
+} autoAcroHighManeuver_e;
+
 typedef struct autoAcroConfig_s {
     bool roll;
     bool flip;
     bool powerLoop;
+    bool yaw;
     uint16_t rollSpeed;
     uint16_t flipSpeed;
     uint16_t powerLoopSpeed;
+    uint16_t yawSpeed;
     uint8_t powerLoopThrottle;
     uint8_t rollTrickAux;
     uint8_t flipTrickAux;
     uint8_t powerLoopTrickAux;
+    uint8_t highManeuver;
+    uint8_t speedDamperAux;
 } autoAcroConfig_t;
 
 PG_DECLARE(autoAcroConfig_t, autoAcroConfig);

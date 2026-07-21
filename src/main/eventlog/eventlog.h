@@ -28,7 +28,7 @@
  * Format: CSV, 1 record per state-change, rate-limited to 1 record/second.
  *
  * CSV columns:
- *   row, timestamp_ms, gps_time, event, detail,
+ *   row, uptime, gps_time, event, detail,
  *   lat_deg7, lon_deg7, lat_dd, lon_dd, google_maps_url
  */
 

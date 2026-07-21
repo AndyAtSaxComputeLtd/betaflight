@@ -26,7 +26,7 @@
  * Filename:  log_XXXX.txt   (XXXX = 0001–9999, wraps to 0001)
  *
  * CSV format per line:
- *   row, timestamp_ms, gps_time, event, detail,
+ *   row, uptime, gps_time, event, detail,
  *   lat_deg7, lon_deg7, lat_dd, lon_dd, google_maps_url
  *
  * Rate-limiting: only one log entry is written per second, per event type,
@@ -62,6 +62,8 @@
 
 #include "fc/runtime_config.h"
 #include "fc/rc_modes.h"
+#include "fc/core.h"
+#include "fc/rc_controls.h"
 
 #include "flight/failsafe.h"
 #include "flight/imu.h"
@@ -99,7 +101,7 @@
 #define GMAPS_URL_PREFIX        "https://maps.google.com/?q="
 
 static const char eventlogCsvHeader[] =
-    "row,timestamp_ms,gps_time,event,detail,"
+    "row,uptime,gps_time,event,detail,"
     "lat_deg7,lon_deg7,lat_dd,lon_dd,google_maps_url\r\n";
 
 // --------------------------------------------------------------------------
@@ -137,6 +139,8 @@ static failsafePhase_e  lastFailsafePhase     = FAILSAFE_IDLE;
 static bool             lastGpsRescueMode     = false;
 static bool             lastCrashFlipMode     = false;
 static bool             lastFailsafeMode      = false;
+static bool             takeoffLoggedThisArm  = false;
+static armingDisableFlags_e lastArmingDisableFlags = 0;
 static beeperMode_e     lastBeeperMode        = BEEPER_SILENCE;
 #ifdef USE_GPS
 static bool             lastGpsFix            = false;
@@ -156,6 +160,7 @@ static void eventlogWriteLine(const char *event, const char *detail,
                                timeMs_t nowMs);
 static void eventlogFlushPending(void);
 static timeMs_t eventlogNowMs(void);
+static void eventlogFormatArmingDisableFlags(armingDisableFlags_e flags, char *detail, size_t detailLen);
 #ifdef USE_FLASHFS
 static void eventlogResumeCountersFromFlash(void);
 #endif
@@ -291,9 +296,32 @@ static bool eventlogParseCsvCounters(const char *line, uint32_t *row, timeMs_t *
         return false;
     }
 
-    timeMs_t parsedTimestamp = 0;
+    uint32_t firstTimestampField = 0;
     while (*cursor >= '0' && *cursor <= '9') {
-        parsedTimestamp = (parsedTimestamp * 10) + (*cursor++ - '0');
+        firstTimestampField = (firstTimestampField * 10) + (*cursor++ - '0');
+    }
+
+    timeMs_t parsedTimestamp = 0;
+    if (*cursor == ':') {
+        cursor++;
+
+        uint32_t seconds = 0;
+        while (*cursor >= '0' && *cursor <= '9') {
+            seconds = (seconds * 10) + (*cursor++ - '0');
+        }
+
+        if (*cursor++ != ':') {
+            return false;
+        }
+
+        uint32_t millis = 0;
+        while (*cursor >= '0' && *cursor <= '9') {
+            millis = (millis * 10) + (*cursor++ - '0');
+        }
+
+        parsedTimestamp = ((timeMs_t)firstTimestampField * 60 * 1000) + (seconds * 1000) + millis;
+    } else {
+        parsedTimestamp = firstTimestampField;
     }
 
     if (*cursor != ',') {
@@ -376,6 +404,8 @@ void eventlogInit(void)
     lastGpsRescueMode = false;
     lastCrashFlipMode = false;
     lastFailsafeMode = false;
+    takeoffLoggedThisArm = false;
+    lastArmingDisableFlags = 0;
     lastBeeperMode = BEEPER_SILENCE;
 #ifdef USE_GPS
     lastGpsFix = false;
@@ -540,6 +570,15 @@ static void eventlogWriteLine(const char *event, const char *detail,
     const uint32_t nextRowNumber = rowNumber + 1;
 
     // Build timestamp strings
+    char uptimeStr[16];
+    const uint32_t uptimeMinutes = nowMs / 60000;
+    const uint32_t uptimeSeconds = (nowMs / 1000) % 60;
+    const uint32_t uptimeMillis = nowMs % 1000;
+    tfp_sprintf(uptimeStr, "%lu:%02lu:%03lu",
+        (unsigned long)uptimeMinutes,
+        (unsigned long)uptimeSeconds,
+        (unsigned long)uptimeMillis);
+
     char timeStr[24] = "";
 
 #ifdef USE_RTC_TIME
@@ -582,10 +621,10 @@ static void eventlogWriteLine(const char *event, const char *detail,
     // Build and write the CSV line
     char buf[200];
     int len = tfp_sprintf(buf,
-        "%lu,%lu,%s,%s,%s,"
+        "%lu,%s,%s,%s,%s,"
         "%ld,%ld,%s,%s,%s\r\n",
         (unsigned long)nextRowNumber,
-        (unsigned long)nowMs,
+        uptimeStr,
         timeStr,
         event,
         detail,
@@ -652,6 +691,23 @@ static const char *eventlogBeeperModeName(beeperMode_e mode)
     return "";
 }
 
+static void eventlogFormatArmingDisableFlags(armingDisableFlags_e flags, char *detail, size_t detailLen)
+{
+    if (!detail || detailLen == 0) {
+        return;
+    }
+
+    if (!flags) {
+        tfp_sprintf(detail, "flags=0x%08lx active=NONE", (unsigned long)flags);
+        return;
+    }
+
+    const armingDisableFlags_e firstFlag = 1 << (ffs(flags) - 1);
+    tfp_sprintf(detail, "flags=0x%08lx active=%s",
+        (unsigned long)flags,
+        getArmingDisableFlagName(firstFlag));
+}
+
 // --------------------------------------------------------------------------
 // Main update — called every FC loop iteration
 // --------------------------------------------------------------------------
@@ -681,8 +737,30 @@ void eventlogUpdate(timeUs_t currentTimeUs)
     // -----------------------------------------------------------------------
     const bool armed = ARMING_FLAG(ARMED);
     if (armed != lastArmed) {
-        eventlogWriteLine(armed ? "ARM" : "DISARM", "", nowMs);
+        if (armed) {
+            eventlogWriteLine("ARM", "", nowMs);
+            takeoffLoggedThisArm = false;
+        } else {
+            takeoffLoggedThisArm = false;
+        }
         lastArmed = armed;
+    }
+
+    const bool throttleRaised = calculateThrottleStatus() != THROTTLE_LOW;
+    if (armed && throttleRaised && !takeoffLoggedThisArm) {
+        eventlogWriteLine("TAKEOFF", "throttle_active", nowMs);
+        takeoffLoggedThisArm = true;
+    }
+
+    // -----------------------------------------------------------------------
+    // ARMING DISABLE / WARNING FLAGS
+    // -----------------------------------------------------------------------
+    const armingDisableFlags_e armingDisableFlags = getArmingDisableFlags();
+    if (armingDisableFlags != lastArmingDisableFlags) {
+        char detail[64];
+        eventlogFormatArmingDisableFlags(armingDisableFlags, detail, sizeof(detail));
+        eventlogWriteLine("ARMING_DISABLED", detail, nowMs);
+        lastArmingDisableFlags = armingDisableFlags;
     }
 
     // -----------------------------------------------------------------------

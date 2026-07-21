@@ -25,8 +25,17 @@
 
 #include "common/axis.h"
 
+typedef enum {
+    AUTO_ACRO_MANEUVER_NONE = 0,
+    AUTO_ACRO_MANEUVER_ROLL,
+    AUTO_ACRO_MANEUVER_FLIP,
+    AUTO_ACRO_MANEUVER_POWER_LOOP,
+    AUTO_ACRO_MANEUVER_YAW,
+} autoAcroManeuver_e;
+
 void autoAcroUpdateTriggers(void);
 void autoAcroUpdate(const float gyroRates[XYZ_AXIS_COUNT], float dT);
 bool autoAcroGetSetpoint(flight_dynamics_index_t axis, float *setpoint);
 bool autoAcroShouldOverrideThrottle(void);
 float autoAcroGetThrottle(void);
+autoAcroManeuver_e autoAcroGetManeuver(void);

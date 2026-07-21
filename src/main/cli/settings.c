@@ -225,6 +225,12 @@ const char * const lookupTableOffOn[] = {
     "OFF", "ON"
 };
 
+#ifdef USE_AUTOACRO
+static const char * const lookupTableAutoAcroHighManeuver[] = {
+    "POWER_LOOP", "YAW"
+};
+#endif
+
 #ifdef USE_DSHOT_TELEMETRY
 static const char * const lookupTableDshotEdt[] = {
     "OFF", "ON", "FORCE"
@@ -614,6 +620,9 @@ const char* const lookupTableYawType[] = {
 
 const lookupTableEntry_t lookupTables[] = {
     LOOKUP_TABLE_ENTRY(lookupTableOffOn),
+#ifdef USE_AUTOACRO
+    LOOKUP_TABLE_ENTRY(lookupTableAutoAcroHighManeuver),
+#endif
     LOOKUP_TABLE_ENTRY(lookupTableUnit),
     LOOKUP_TABLE_ENTRY(lookupTableAlignment),
 #ifdef USE_GPS
@@ -906,13 +915,17 @@ const clivalue_t valueTable[] = {
     { PARAM_NAME_AUTOACRO_ROLL, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, roll) },
     { PARAM_NAME_AUTOACRO_FLIP, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, flip) },
     { PARAM_NAME_AUTOACRO_POWER_LOOP, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoop) },
+    { PARAM_NAME_AUTOACRO_YAW, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, yaw) },
     { PARAM_NAME_AUTOACRO_ROLL_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, rollSpeed) },
     { PARAM_NAME_AUTOACRO_FLIP_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, flipSpeed) },
     { PARAM_NAME_AUTOACRO_POWERLOOP_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoopSpeed) },
+    { PARAM_NAME_AUTOACRO_YAW_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, yawSpeed) },
     { PARAM_NAME_AUTOACRO_POWERLOOP_THROTTLE, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 100 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoopThrottle) },
     { PARAM_NAME_AUTOACRO_ROLL_TRICK_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, rollTrickAux) },
     { PARAM_NAME_AUTOACRO_FLIP_TRICK_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, flipTrickAux) },
     { PARAM_NAME_AUTOACRO_POWERLOOP_TRICK_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoopTrickAux) },
+    { PARAM_NAME_AUTOACRO_LOOP_YAW_HIGH, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_AUTOACRO_HIGH_MANEUVER }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, highManeuver) },
+    { PARAM_NAME_AUTOACRO_SPEED_DAMPER_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, speedDamperAux) },
 #endif
 
 #ifdef USE_RX_SPI

@@ -30,19 +30,23 @@
 
 #include "auto_acro.h"
 
-PG_REGISTER_WITH_RESET_TEMPLATE(autoAcroConfig_t, autoAcroConfig, PG_AUTO_ACRO_CONFIG, 1);
+PG_REGISTER_WITH_RESET_TEMPLATE(autoAcroConfig_t, autoAcroConfig, PG_AUTO_ACRO_CONFIG, 4);
 
 PG_RESET_TEMPLATE(autoAcroConfig_t, autoAcroConfig,
     .roll = true,
     .flip = true,
     .powerLoop = true,
+    .yaw = true,
     .rollSpeed = 720,
     .flipSpeed = 720,
     .powerLoopSpeed = 360,
+    .yawSpeed = 360,
     .powerLoopThrottle = 75,
     .rollTrickAux = AUX9,
     .flipTrickAux = AUX10,
     .powerLoopTrickAux = AUX11,
+    .highManeuver = AUTO_ACRO_HIGH_POWER_LOOP,
+    .speedDamperAux = 15,
 );
 
 #endif // USE_AUTOACRO
