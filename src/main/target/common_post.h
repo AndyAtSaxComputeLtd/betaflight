@@ -453,6 +453,10 @@
 #undef USE_SDCARD_SPI
 #endif
 
+#if defined(USE_EVENTLOG) && !defined(USE_SDCARD) && !defined(USE_FLASHFS)
+#undef USE_EVENTLOG
+#endif
+
 #if !defined(USE_VCP)
 #undef USE_USB_CDC_HID
 #undef USE_USB_MSC
@@ -681,4 +685,3 @@ extern struct linker_symbol __config_end;
 #define USE_PIN_PULL_UP_DOWN
 #endif
 #endif // USE_PINIO
-

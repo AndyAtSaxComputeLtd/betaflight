@@ -26,6 +26,9 @@
 
 typedef enum {
     TABLE_OFF_ON = 0,
+#ifdef USE_AUTOACRO
+    TABLE_AUTOACRO_HIGH_MANEUVER,
+#endif
     TABLE_UNIT,
     TABLE_ALIGNMENT,
 #ifdef USE_GPS

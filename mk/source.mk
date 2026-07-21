@@ -2,6 +2,8 @@ PG_SRC = \
             pg/adc.c \
             pg/alt_hold_multirotor.c \
             pg/alt_hold_wing.c \
+            pg/auto_acro.c \
+            pg/eventlog.c \
             pg/autopilot_multirotor.c \
             pg/autopilot_wing.c \
             pg/beeper.c \
@@ -157,6 +159,7 @@ COMMON_SRC = \
             fc/rc_modes.c \
             flight/alt_hold_multirotor.c \
             flight/alt_hold_wing.c \
+            flight/auto_acro.c \
             flight/autopilot_multirotor.c \
             flight/autopilot_wing.c \
             flight/dyn_notch_filter.c \
@@ -361,6 +364,10 @@ FLASH_SRC += \
             drivers/flash/flash_w25q128fv.c \
             io/flashfs.c
 
+EVENTLOG_SRC += \
+            eventlog/eventlog.c \
+            eventlog/eventlog_flash.c
+
 SDCARD_SRC += \
             drivers/sdcard.c \
             drivers/sdcard_spi.c \
@@ -541,7 +548,7 @@ SRC += $(wildcard $(DSP_LIB)/Source/*/*.S)
 
 endif
 
-SRC += $(FLASH_SRC) $(MSC_SRC) $(SDCARD_SRC) $(COMMON_SRC)
+SRC += $(FLASH_SRC) $(MSC_SRC) $(SDCARD_SRC) $(EVENTLOG_SRC) $(COMMON_SRC)
 
 #excludes
 SRC   := $(filter-out $(MCU_EXCLUDES), $(SRC))

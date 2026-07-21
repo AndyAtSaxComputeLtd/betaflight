@@ -29,6 +29,7 @@
 #include "cli/cli.h"
 
 #include "common/maths.h"
+#include "common/printf.h"
 #include "common/utils.h"
 
 #include "drivers/time.h"
@@ -50,6 +51,10 @@
 #endif
 
 #include "config/config.h"
+
+#ifdef USE_EVENTLOG
+#include "eventlog/eventlog.h"
+#endif
 
 #include "io/serial.h"
 
@@ -487,7 +492,17 @@ bool isSerialConfigValid(serialConfig_t *serialConfigToCheck)
 #ifdef USE_SOFTSERIAL
         if (serialType(portConfig->identifier) == SERIALTYPE_SOFTSERIAL) {
             // Ensure MSP or serial RX is not enabled on soft serial ports
+#ifdef USE_EVENTLOG
+            const uint32_t previousFunctionMask = serialConfigToCheck->portConfigs[index].functionMask;
+#endif
             serialConfigToCheck->portConfigs[index].functionMask &= ~(FUNCTION_MSP | FUNCTION_RX_SERIAL);
+#ifdef USE_EVENTLOG
+            if (previousFunctionMask != serialConfigToCheck->portConfigs[index].functionMask) {
+                char detail[80];
+                tfp_sprintf(detail, "id=%u mask=%lu->%lu", (unsigned)portConfig->identifier, (unsigned long)previousFunctionMask, (unsigned long)serialConfigToCheck->portConfigs[index].functionMask);
+                eventlogAdd("SERIAL_CFG_MASK", detail);
+            }
+#endif
             // Ensure that the baud rate on soft serial ports is limited to 19200
 #ifndef USE_OVERRIDE_SOFTSERIAL_BAUDRATE
             serialConfigToCheck->portConfigs[index].gps_baudrateIndex = constrain(portConfig->gps_baudrateIndex, BAUD_AUTO, BAUD_19200);
@@ -565,6 +580,13 @@ serialPort_t *openSerialPort(
     serialPortUsage_t *serialPortUsage = findSerialPortUsageByIdentifier(identifier);
     if (!serialPortUsage || serialPortUsage->function != FUNCTION_NONE) {
         // not available / already in use
+#ifdef USE_EVENTLOG
+        if (serialType(identifier) == SERIALTYPE_SOFTSERIAL) {
+            char detail[80];
+            tfp_sprintf(detail, "id=%u fn=%lu unavailable", (unsigned)identifier, (unsigned long)function);
+            eventlogAdd("SERIAL_OPEN_FAIL", detail);
+        }
+#endif
         return NULL;
     }
 
@@ -590,9 +612,21 @@ serialPort_t *openSerialPort(
         break;
 #ifdef USE_SOFTSERIAL
     case SERIALTYPE_SOFTSERIAL:
+#ifdef USE_EVENTLOG
+        {
+            char detail[96];
+            tfp_sprintf(detail, "id=%u fn=%lu baud=%lu mode=%u opt=%u", (unsigned)identifier, (unsigned long)function, (unsigned long)baudRate, (unsigned)mode, (unsigned)options);
+            eventlogAdd("SERIAL_OPEN", detail);
+        }
+#endif
 # if !defined(USE_OVERRIDE_SOFTSERIAL_BAUDRATE)
         if (baudRate > 19200) {
             // Don't continue if baud rate requested is higher then the limit set on soft serial ports
+#ifdef USE_EVENTLOG
+            char detail[64];
+            tfp_sprintf(detail, "id=%u baud=%lu over_limit", (unsigned)identifier, (unsigned long)baudRate);
+            eventlogAdd("SERIAL_OPEN_FAIL", detail);
+#endif
             return NULL;
         }
 # endif // !USE_OVERRIDE_SOFTSERIAL_BAUDRATE
@@ -604,6 +638,13 @@ serialPort_t *openSerialPort(
     }
 
     if (!serialPort) {
+#ifdef USE_EVENTLOG
+        if (serialType(identifier) == SERIALTYPE_SOFTSERIAL) {
+            char detail[64];
+            tfp_sprintf(detail, "id=%u open_returned_null", (unsigned)identifier);
+            eventlogAdd("SERIAL_OPEN_FAIL", detail);
+        }
+#endif
         return NULL;
     }
 
@@ -637,6 +678,18 @@ void serialInit(bool softserialEnabled)
 {
     memset(&serialPortUsageList, 0, sizeof(serialPortUsageList));
 
+#ifdef USE_EVENTLOG
+    {
+        char detail[80];
+#ifdef USE_SOFTSERIAL
+        tfp_sprintf(detail, "enabled=%u count=%u", softserialEnabled ? 1 : 0, (unsigned)SERIAL_SOFTSERIAL_COUNT);
+#else
+        tfp_sprintf(detail, "enabled=%u count=0 not_built", softserialEnabled ? 1 : 0);
+#endif
+        eventlogAdd("SERIAL_INIT", detail);
+    }
+#endif
+
     for (int index = 0; index < SERIAL_PORT_COUNT; index++) {
         serialPortUsageList[index].identifier = serialPortIdentifiers[index];
 
@@ -651,6 +704,11 @@ void serialInit(bool softserialEnabled)
 
         if (serialType(serialPortUsageList[index].identifier) == SERIALTYPE_SOFTSERIAL && !softserialEnabled) {
             // soft serial is not enabled, or not built into the firmware
+#ifdef USE_EVENTLOG
+            char detail[48];
+            tfp_sprintf(detail, "id=%u feature_disabled", (unsigned)serialPortUsageList[index].identifier);
+            eventlogAdd("SERIAL_SKIP", detail);
+#endif
             serialPortUsageList[index].identifier = SERIAL_PORT_NONE;
             continue;
         }

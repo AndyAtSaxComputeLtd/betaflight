@@ -79,6 +79,7 @@
 
 #include "pg/adc.h"
 #include "pg/alt_hold.h"
+#include "pg/auto_acro.h"
 #include "pg/autopilot.h"
 #include "pg/beeper.h"
 #include "pg/beeper_dev.h"
@@ -86,6 +87,7 @@
 #include "pg/dashboard.h"
 #include "pg/displayport_profiles.h"
 #include "pg/dyn_notch.h"
+#include "pg/eventlog.h"
 #include "pg/flash.h"
 #include "pg/gimbal.h"
 #include "pg/gyrodev.h"
@@ -222,6 +224,12 @@ const char * const lookupTableOpticalflowHardware[] = {
 const char * const lookupTableOffOn[] = {
     "OFF", "ON"
 };
+
+#ifdef USE_AUTOACRO
+static const char * const lookupTableAutoAcroHighManeuver[] = {
+    "POWER_LOOP", "YAW"
+};
+#endif
 
 #ifdef USE_DSHOT_TELEMETRY
 static const char * const lookupTableDshotEdt[] = {
@@ -612,6 +620,9 @@ const char* const lookupTableYawType[] = {
 
 const lookupTableEntry_t lookupTables[] = {
     LOOKUP_TABLE_ENTRY(lookupTableOffOn),
+#ifdef USE_AUTOACRO
+    LOOKUP_TABLE_ENTRY(lookupTableAutoAcroHighManeuver),
+#endif
     LOOKUP_TABLE_ENTRY(lookupTableUnit),
     LOOKUP_TABLE_ENTRY(lookupTableAlignment),
 #ifdef USE_GPS
@@ -898,6 +909,25 @@ const clivalue_t valueTable[] = {
     { "msp_override_channels_mask",      VAR_UINT32 | MASTER_VALUE, .config.u32Max = (1 << MAX_SUPPORTED_RC_CHANNEL_COUNT) - 1, PG_RX_CONFIG, offsetof(rxConfig_t, msp_override_channels_mask)},
     { "msp_override_failsafe",      VAR_UINT8  | HARDWARE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_RX_CONFIG, offsetof(rxConfig_t, msp_override_failsafe)},
 #endif
+
+#ifdef USE_AUTOACRO
+// PG_AUTO_ACRO_CONFIG
+    { PARAM_NAME_AUTOACRO_ROLL, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, roll) },
+    { PARAM_NAME_AUTOACRO_FLIP, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, flip) },
+    { PARAM_NAME_AUTOACRO_POWER_LOOP, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoop) },
+    { PARAM_NAME_AUTOACRO_YAW, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, yaw) },
+    { PARAM_NAME_AUTOACRO_ROLL_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, rollSpeed) },
+    { PARAM_NAME_AUTOACRO_FLIP_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, flipSpeed) },
+    { PARAM_NAME_AUTOACRO_POWERLOOP_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoopSpeed) },
+    { PARAM_NAME_AUTOACRO_YAW_SPEED, VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 90, 2000 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, yawSpeed) },
+    { PARAM_NAME_AUTOACRO_POWERLOOP_THROTTLE, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 100 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoopThrottle) },
+    { PARAM_NAME_AUTOACRO_ROLL_TRICK_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, rollTrickAux) },
+    { PARAM_NAME_AUTOACRO_FLIP_TRICK_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, flipTrickAux) },
+    { PARAM_NAME_AUTOACRO_POWERLOOP_TRICK_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, powerLoopTrickAux) },
+    { PARAM_NAME_AUTOACRO_LOOP_YAW_HIGH, VAR_UINT8 | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_AUTOACRO_HIGH_MANEUVER }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, highManeuver) },
+    { PARAM_NAME_AUTOACRO_SPEED_DAMPER_AUX, VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { AUX1, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1 }, PG_AUTO_ACRO_CONFIG, offsetof(autoAcroConfig_t, speedDamperAux) },
+#endif
+
 #ifdef USE_RX_SPI
     { "rx_spi_protocol",            VAR_UINT8  | HARDWARE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_RX_SPI }, PG_RX_SPI_CONFIG, offsetof(rxSpiConfig_t, rx_spi_protocol) },
     { "rx_spi_bus",                 VAR_UINT8   | HARDWARE_VALUE, .config.minmaxUnsigned = { 0, SPIDEV_COUNT }, PG_RX_SPI_CONFIG, offsetof(rxSpiConfig_t, spibus) },
@@ -953,6 +983,13 @@ const clivalue_t valueTable[] = {
 #endif
     { "blackbox_mode",              VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_BLACKBOX_MODE }, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, mode) },
     { "blackbox_high_resolution",   VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_BLACKBOX_CONFIG, offsetof(blackboxConfig_t, high_resolution) },
+#endif
+
+#ifdef USE_EVENTLOG
+// PG_EVENTLOG_CONFIG
+    { "eventlog_enabled",           VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_EVENTLOG_CONFIG, offsetof(eventlogConfig_t, enabled) },
+    { "eventlog_gps",               VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_EVENTLOG_CONFIG, offsetof(eventlogConfig_t, gpsLoggingEnabled) },
+    { "eventlog_size_kb",           VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 16, 4096 }, PG_EVENTLOG_CONFIG, offsetof(eventlogConfig_t, sizeKb) },
 #endif
 
 // PG_MOTOR_CONFIG

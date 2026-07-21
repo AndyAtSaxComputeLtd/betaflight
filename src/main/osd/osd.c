@@ -104,6 +104,8 @@
 #include "hardware_revision.h"
 #endif
 
+static const char CRASHFLIP_WARNING[] = ">TURTLE TIME<";
+
 typedef enum {
     OSD_LOGO_ARMING_OFF,
     OSD_LOGO_ARMING_ON,

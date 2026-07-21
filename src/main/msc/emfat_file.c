@@ -38,6 +38,10 @@
 
 #include "io/flashfs.h"
 
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+#include "eventlog/eventlog_flash.h"
+#endif
+
 #include "pg/flash.h"
 
 #include "msc/usbd_storage.h"
@@ -253,6 +257,15 @@ static void bblog_read_proc(uint8_t *dest, int size, uint32_t offset, emfat_entr
     flashfsReadAbs(offset, dest, size);
 }
 
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+static void eventlog_read_proc(uint8_t *dest, int size, uint32_t offset, emfat_entry_t *entry)
+{
+    UNUSED(entry);
+
+    eventlogFlashReadAbs(offset, dest, size);
+}
+#endif
+
 static const emfat_entry_t entriesPredefined[] =
 {
     // name           dir    attr         lvl offset  size             max_size        user                time  read               write
@@ -268,10 +281,25 @@ static const emfat_entry_t entriesPredefined[] =
 #endif
     { FC_FIRMWARE_IDENTIFIER "_ALL.BBL", 0,     0,           1,  0,      0,               0,              0,                  CMA,  bblog_read_proc,   NULL, { 0 } },
     { "PADDING.TXT",  0,     ATTR_HIDDEN, 1,  0,      0,               0,              0,                  CMA,  NULL,              NULL, { 0 } },
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+    { "EVENTLOG.TXT", 0,     0,           1,  0,      0,               0,              0,                  CMA,  eventlog_read_proc, NULL, { 0 } },
+    { "EVENTPAD.TXT", 0,     ATTR_HIDDEN, 1,  0,      0,               0,              0,                  CMA,  NULL,              NULL, { 0 } },
+#endif
 };
 
 #define PREDEFINED_ENTRY_COUNT (1 + EMFAT_INCR_AUTORUN + EMFAT_INCR_ICON + EMFAT_INCR_README)
-#define APPENDED_ENTRY_COUNT 2
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+#define EVENTLOG_APPENDED_ENTRY_COUNT 2
+#else
+#define EVENTLOG_APPENDED_ENTRY_COUNT 0
+#endif
+
+#define APPENDED_ENTRY_COUNT (2 + EVENTLOG_APPENDED_ENTRY_COUNT)
+
+#define EMFAT_ALL_LOGS_ENTRY_INDEX (PREDEFINED_ENTRY_COUNT)
+#define EMFAT_PADDING_ENTRY_INDEX (PREDEFINED_ENTRY_COUNT + 1)
+#define EMFAT_EVENTLOG_ENTRY_INDEX (PREDEFINED_ENTRY_COUNT + 2)
+#define EMFAT_EVENTLOG_PADDING_ENTRY_INDEX (PREDEFINED_ENTRY_COUNT + 3)
 
 #define EMFAT_MAX_LOG_ENTRY 100
 #define EMFAT_MAX_ENTRY (PREDEFINED_ENTRY_COUNT + EMFAT_MAX_LOG_ENTRY + APPENDED_ENTRY_COUNT)
@@ -411,6 +439,10 @@ static int emfat_find_log(emfat_entry_t *entry, int maxCount, int flashfsUsedSpa
 void emfat_init_files(void)
 {
     int flashfsUsedSpace = 0;
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+    uint32_t eventlogUsedSpace = 0;
+    uint32_t eventlogSize = 0;
+#endif
     int entryIndex = PREDEFINED_ENTRY_COUNT;
     emfat_entry_t *entry;
     memset(entries, 0, sizeof(entries));
@@ -445,7 +477,7 @@ void emfat_init_files(void)
     if (logCount > 0) {
         // Create the all logs entry that represents all used flash space to
         // allow downloading the entire log in one file
-        entries[entryIndex] = entriesPredefined[PREDEFINED_ENTRY_COUNT];
+        entries[entryIndex] = entriesPredefined[EMFAT_ALL_LOGS_ENTRY_INDEX];
         entry = &entries[entryIndex];
         entry->curr_size = flashfsUsedSpace;
         entry->max_size = entry->curr_size;
@@ -457,14 +489,37 @@ void emfat_init_files(void)
 
     // Padding file to fill out the filesystem size to FILESYSTEM_SIZE_MB
     if (flashfsUsedSpace * 2 < FILESYSTEM_SIZE_MB * 1024 * 1024) {
-        entries[entryIndex] = entriesPredefined[PREDEFINED_ENTRY_COUNT + 1];
+        entries[entryIndex] = entriesPredefined[EMFAT_PADDING_ENTRY_INDEX];
         entry = &entries[entryIndex];
         // used space is doubled because of the individual files plus the single complete file
         entry->curr_size = (FILESYSTEM_SIZE_MB * 1024 * 1024) - (flashfsUsedSpace * 2);
         entry->max_size = entry->curr_size;
         // This entry has timestamps corresponding to when the filesystem is mounted
         emfat_set_entry_cma(entry);
+        ++entryIndex;
     }
+
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+    if (eventlogFlashInit()) {
+        eventlogUsedSpace = eventlogFlashGetUsedSize();
+        eventlogSize = eventlogFlashGetSize();
+
+        entries[entryIndex] = entriesPredefined[EMFAT_EVENTLOG_ENTRY_INDEX];
+        entry = &entries[entryIndex];
+        entry->curr_size = eventlogUsedSpace;
+        entry->max_size = entry->curr_size;
+        emfat_set_entry_cma(entry);
+        ++entryIndex;
+
+        if (eventlogUsedSpace < eventlogSize) {
+            entries[entryIndex] = entriesPredefined[EMFAT_EVENTLOG_PADDING_ENTRY_INDEX];
+            entry = &entries[entryIndex];
+            entry->curr_size = eventlogSize - eventlogUsedSpace;
+            entry->max_size = entry->curr_size;
+            emfat_set_entry_cma(entry);
+        }
+    }
+#endif
 
     emfat_init(&emfat, "BETAFLT", entries);
     LED0_OFF;

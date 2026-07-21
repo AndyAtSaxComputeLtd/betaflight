@@ -201,6 +201,23 @@
 #define PARAM_NAME_CHIRP_FREQUENCY_END_DECI_HZ "chirp_frequency_end_deci_hz"
 #define PARAM_NAME_CHIRP_TIME_SECONDS "chirp_time_seconds"
 
+#ifdef USE_AUTOACRO
+#define PARAM_NAME_AUTOACRO_ROLL "autoacro_roll"
+#define PARAM_NAME_AUTOACRO_FLIP "autoacro_flip"
+#define PARAM_NAME_AUTOACRO_POWER_LOOP "autoacro_power_loop"
+#define PARAM_NAME_AUTOACRO_YAW "autoacro_yaw"
+#define PARAM_NAME_AUTOACRO_ROLL_SPEED "autoacro_roll_speed"
+#define PARAM_NAME_AUTOACRO_FLIP_SPEED "autoacro_flip_speed"
+#define PARAM_NAME_AUTOACRO_POWERLOOP_SPEED "autoacro_powerloop_speed"
+#define PARAM_NAME_AUTOACRO_YAW_SPEED "autoacro_yaw_speed"
+#define PARAM_NAME_AUTOACRO_POWERLOOP_THROTTLE "autoacro_powerloop_throttle"
+#define PARAM_NAME_AUTOACRO_ROLL_TRICK_AUX "autoacro_roll_trick_aux"
+#define PARAM_NAME_AUTOACRO_FLIP_TRICK_AUX "autoacro_flip_trick_aux"
+#define PARAM_NAME_AUTOACRO_POWERLOOP_TRICK_AUX "autoacro_powerloop_trick_aux"
+#define PARAM_NAME_AUTOACRO_LOOP_YAW_HIGH "autoacro_loop_yaw_high"
+#define PARAM_NAME_AUTOACRO_SPEED_DAMPER_AUX "autoacro_speed_damper_aux"
+#endif
+
 #ifdef USE_GPS
 #define PARAM_NAME_GPS_PROVIDER "gps_provider"
 #define PARAM_NAME_GPS_SBAS_MODE "gps_sbas_mode"

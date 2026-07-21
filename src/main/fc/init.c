@@ -26,6 +26,9 @@
 #include "platform.h"
 
 #include "blackbox/blackbox.h"
+#ifdef USE_EVENTLOG
+#include "eventlog/eventlog.h"
+#endif
 
 #include "build/build_config.h"
 #include "build/debug.h"
@@ -796,6 +799,9 @@ void initPhase3(void)
 #endif
 #ifdef USE_BLACKBOX
     blackboxInit();
+#endif
+#ifdef USE_EVENTLOG
+    eventlogInit();
 #endif
 
 #ifdef USE_ACC

@@ -54,6 +54,13 @@ bool cliMode = false;
 #include "common/typeconversion.h"
 #include "common/utils.h"
 
+#ifdef USE_EVENTLOG
+#include "eventlog/eventlog.h"
+#ifdef USE_FLASHFS
+#include "eventlog/eventlog_flash.h"
+#endif
+#endif
+
 #include "config/config.h"
 #include "config/config_eeprom.h"
 #include "config/feature.h"
@@ -133,6 +140,9 @@ bool cliMode = false;
 #include "pg/board.h"
 #include "pg/bus_i2c.h"
 #include "pg/bus_spi.h"
+#ifdef USE_EVENTLOG
+#include "pg/eventlog.h"
+#endif
 #include "pg/gyrodev.h"
 #include "pg/max7456.h"
 #include "pg/mco.h"
@@ -311,6 +321,13 @@ typedef struct serialPassthroughPort_s {
     portOptions_e options;
     serialPort_t *port;
 } serialPassthroughPort_t;
+
+#if defined(USE_EVENTLOG) && defined(USE_SERIAL_PASSTHROUGH)
+static void cliEventlogPassthrough(const char *event, const char *detail)
+{
+    eventlogAdd(event, detail ? detail : "");
+}
+#endif
 
 static void cliClearInputBuffer(void)
 {
@@ -1454,6 +1471,14 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
         return;
     }
 
+#ifdef USE_EVENTLOG
+    {
+        char detail[96];
+        tfp_sprintf(detail, "cmd=%s", cmdline);
+        cliEventlogPassthrough("CLI_PASSTHRU", detail);
+    }
+#endif
+
     serialPassthroughPort_t ports[2] = { {SERIAL_PORT_NONE, 0, 0, 0, NULL}, {cliPort->identifier, 0, 0, 0, cliPort} };
     bool enableBaudCb = false;
 #ifdef USE_PINIO
@@ -1488,6 +1513,13 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
                 // empty
             } else {
                 cliPrintLinef("Failed parsing port%d (%s)", portN + 1, tok);
+#ifdef USE_EVENTLOG
+                {
+                    char detail[64];
+                    tfp_sprintf(detail, "parse port=%u tok=%s", portN + 1, tok);
+                    cliEventlogPassthrough("CLI_PT_FAIL", detail);
+                }
+#endif
                 return;
             }
             if (portN == 1) { // port1 is specified, don't use CLI port
@@ -1519,12 +1551,22 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
             port1PinioDtr = atoi(tok);
             if (port1PinioDtr < 0 || port1PinioDtr >= PINIO_COUNT) {
                 cliPrintLinef("Invalid PinIO number %d", port1PinioDtr);
+#ifdef USE_EVENTLOG
+                cliEventlogPassthrough("CLI_PT_FAIL", "bad_pinio");
+#endif
                 return;
             }
 #endif /* USE_PINIO */
             break;
         default:
             cliPrintLinef("Unexpected argument %d (%s)", index + 1, tok);
+#ifdef USE_EVENTLOG
+            {
+                char detail[64];
+                tfp_sprintf(detail, "arg=%d tok=%s", index + 1, tok);
+                cliEventlogPassthrough("CLI_PT_FAIL", detail);
+            }
+#endif
             return;
         }
         index++;
@@ -1533,15 +1575,32 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
     for (unsigned i = 0; i < ARRAYLEN(ports); i++) {
         if (findSerialPortIndexByIdentifier(ports[i].id) < 0) {
             cliPrintLinef("Invalid port%d %d", i + 1, ports[i].id);
+#ifdef USE_EVENTLOG
+            {
+                char detail[64];
+                tfp_sprintf(detail, "invalid port=%u id=%d", i + 1, ports[i].id);
+                cliEventlogPassthrough("CLI_PT_FAIL", detail);
+            }
+#endif
             return;
         } else {
             cliPrintLinef("Port%d: %s", i + 1, serialName(ports[i].id, invalidName));
+#ifdef USE_EVENTLOG
+            {
+                char detail[80];
+                tfp_sprintf(detail, "port=%u id=%d name=%s", i + 1, ports[i].id, serialName(ports[i].id, invalidName));
+                cliEventlogPassthrough("CLI_PT_PORT", detail);
+            }
+#endif
         }
     }
 
     // Port checks
     if (ports[0].id == ports[1].id) {
         cliPrintLinef("Port1 and port2 are same");
+#ifdef USE_EVENTLOG
+        cliEventlogPassthrough("CLI_PT_FAIL", "same_port");
+#endif
         return ;
     }
 
@@ -1574,15 +1633,36 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
                 cliPrintLinef("Port%d: using options 0x%x",
                               portIndex, cfg->options);
             }
+#ifdef USE_EVENTLOG
+            {
+                char detail[96];
+                tfp_sprintf(detail, "open port=%d id=%d baud=%lu mode=%u opt=%u", portIndex, cfg->id, (unsigned long)cfg->baud, (unsigned)cfg->mode, (unsigned)cfg->options);
+                cliEventlogPassthrough("CLI_PT_OPEN", detail);
+            }
+#endif
             cfg->port = openSerialPort(cfg->id, FUNCTION_NONE,
                                        NULL, NULL,   // rxCallback
                                        cfg->baud, cfg->mode, cfg->options);
             if (!cfg->port) {
                 cliPrintLinef("Port%d could not be opened.", portIndex);
+#ifdef USE_EVENTLOG
+                {
+                    char detail[64];
+                    tfp_sprintf(detail, "open_failed port=%d id=%d", portIndex, cfg->id);
+                    cliEventlogPassthrough("CLI_PT_FAIL", detail);
+                }
+#endif
                 return;
             }
 
             cliPrintf("Port%d opened, %sbaud = %d.\r\n", portIndex, isUseDefaultBaud ? "default ":"", cfg->baud);
+#ifdef USE_EVENTLOG
+            {
+                char detail[64];
+                tfp_sprintf(detail, "opened port=%d baud=%lu", portIndex, (unsigned long)cfg->baud);
+                cliEventlogPassthrough("CLI_PT_OPENED", detail);
+            }
+#endif
         } else {
             cfg->port = portUsage->serialPort;
             // If the user supplied a mode, override the port's mode, otherwise
@@ -1610,6 +1690,13 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
                 cliPrintLinef("Port%d: Callback removed", portIndex);
                 cfg->port->rxCallback = NULL;
             }
+#ifdef USE_EVENTLOG
+            {
+                char detail[80];
+                tfp_sprintf(detail, "already port=%d id=%d baud=%lu", portIndex, cfg->id, (unsigned long)cfg->port->baudRate);
+                cliEventlogPassthrough("CLI_PT_OPENED", detail);
+            }
+#endif
         }
     }
 
@@ -1627,6 +1714,9 @@ static void cliSerialPassthrough(const char *cmdName, char *cmdline)
     }
 
     cliPrintLinef("Forwarding, power cycle %sto exit.", resetMessage);
+#ifdef USE_EVENTLOG
+    cliEventlogPassthrough("CLI_PT_FWD", "start");
+#endif
 
     if (ports[1].id == SERIAL_PORT_USB_VCP) {
         do {
@@ -2549,6 +2639,151 @@ static void cliFlashInfo(const char *cmdName, char *cmdline)
 #endif
 }
 #endif // USE_FLASH_CHIP
+
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+static void cliEventlogDump(void)
+{
+    if (!eventlogFlashInit()) {
+        cliPrintLine("Event log flash is not available.");
+        return;
+    }
+
+    uint32_t offset = 0;
+    uint32_t remaining = eventlogFlashGetUsedSize();
+
+    cliPrintLinef("Event log usedSize=%u", remaining);
+
+    uint8_t buffer[64];
+    while (remaining > 0) {
+        const uint32_t bytesToRead = remaining < sizeof(buffer) ? remaining : sizeof(buffer);
+        const int bytesRead = eventlogFlashReadAbs(offset, buffer, bytesToRead);
+
+        if (bytesRead <= 0) {
+            break;
+        }
+
+        for (int i = 0; i < bytesRead; i++) {
+            cliWrite(buffer[i]);
+        }
+
+        cliWriterFlush();
+        offset += bytesRead;
+        remaining -= bytesRead;
+    }
+
+    cliPrintLinefeed();
+}
+
+static void cliEventlogClear(void)
+{
+    if (!eventlogFlashInit()) {
+        cliPrintLine("Event log flash is not available.");
+        return;
+    }
+
+    cliPrintLine("Erasing event log, please wait ...");
+    cliWriterFlush();
+
+    if (eventlogFlashErase()) {
+        cliPrintLine("Done.");
+    } else {
+        cliPrintLine("Failed.");
+    }
+}
+
+static bool cliEventlogParseOnOff(const char *value, bool *enabled)
+{
+    if (!value || !enabled) {
+        return false;
+    }
+
+    if (strcasecmp(value, "on") == 0 || strcasecmp(value, "enable") == 0 || strcasecmp(value, "enabled") == 0 || strcmp(value, "1") == 0) {
+        *enabled = true;
+        return true;
+    }
+
+    if (strcasecmp(value, "off") == 0 || strcasecmp(value, "disable") == 0 || strcasecmp(value, "disabled") == 0 || strcmp(value, "0") == 0) {
+        *enabled = false;
+        return true;
+    }
+
+    return false;
+}
+
+static void cliEventlogStatus(void)
+{
+    cliPrintLinef("Event log enabled=%u gps=%u sizeKb=%u",
+        eventlogConfig()->enabled ? 1 : 0,
+        eventlogConfig()->gpsLoggingEnabled ? 1 : 0,
+        (unsigned)eventlogConfig()->sizeKb);
+
+    if (eventlogFlashInit()) {
+        cliPrintLinef("Event log flash size=%u usedSize=%u",
+            (unsigned)eventlogFlashGetSize(),
+            (unsigned)eventlogFlashGetUsedSize());
+    } else {
+        cliPrintLine("Event log flash is not available.");
+    }
+}
+
+static void cliEventlog(const char *cmdName, char *cmdline)
+{
+    if (isEmpty(cmdline)) {
+        cliPrintLine("Available subcommands: status, dump, clear, enable, disable, size <kb>, gps <on|off>");
+        return;
+    }
+
+    char *saveptr = NULL;
+    char *subcommand = strtok_r(cmdline, " ", &saveptr);
+    char *argument = strtok_r(NULL, " ", &saveptr);
+
+    if (strcasecmp(subcommand, "status") == 0) {
+        cliEventlogStatus();
+    } else if (strcasecmp(subcommand, "dump") == 0) {
+        cliEventlogDump();
+    } else if (strcasecmp(subcommand, "clear") == 0) {
+        cliEventlogClear();
+    } else if (strcasecmp(subcommand, "enable") == 0) {
+        const bool wasEnabled = eventlogConfig()->enabled;
+        eventlogConfigMutable()->enabled = true;
+        if (!wasEnabled) {
+            eventlogInit();
+        }
+        setConfigDirty();
+        cliPrintLine("Event log enabled. Use save to persist.");
+    } else if (strcasecmp(subcommand, "disable") == 0) {
+        const bool wasEnabled = eventlogConfig()->enabled;
+        eventlogConfigMutable()->enabled = false;
+        if (wasEnabled) {
+            eventlogClose();
+        }
+        setConfigDirty();
+        cliPrintLine("Event log disabled. Use save to persist.");
+    } else if (strcasecmp(subcommand, "size") == 0) {
+        if (!argument) {
+            cliPrintLinef("Event log sizeKb=%u", (unsigned)eventlogConfig()->sizeKb);
+            return;
+        }
+
+        const uint16_t sizeKb = constrain(atoi(argument), 16, 4096);
+        eventlogConfigMutable()->sizeKb = sizeKb;
+        setConfigDirty();
+        cliPrintLinef("Event log sizeKb=%u. Use save, reboot, and clear the event log before relying on the new size.", (unsigned)sizeKb);
+    } else if (strcasecmp(subcommand, "gps") == 0) {
+        bool enabled = false;
+        if (!cliEventlogParseOnOff(argument, &enabled)) {
+            cliPrintErrorLinef(cmdName, "EXPECTED gps <on|off>");
+            return;
+        }
+
+        eventlogConfigMutable()->gpsLoggingEnabled = enabled;
+        setConfigDirty();
+        cliPrintLinef("Event log GPS logging %s. Use save to persist.", enabled ? "enabled" : "disabled");
+    } else {
+        cliPrintErrorLinef(cmdName, "UNKNOWN SUBCOMMAND");
+    }
+}
+#endif
 
 #if defined(USE_FLASHFS) && defined(USE_FLASH_CHIP)
 static void cliFlashErase(const char *cmdName, char *cmdline)
@@ -6611,6 +6846,9 @@ const clicmd_t cmdTable[] = {
         "[master|profile|rates|hardware|all] {defaults|bare}", cliDump),
 #ifdef USE_ESCSERIAL
     CLI_COMMAND_DEF("escprog", "passthrough esc to serial", "<mode [sk/bl/ki/cc]> <index>", cliEscPassthrough),
+#endif
+#if defined(USE_EVENTLOG) && defined(USE_FLASHFS)
+    CLI_COMMAND_DEF("eventlog", "custom event log", "status | dump | clear | enable | disable | size <kb> | gps <on|off>", cliEventlog),
 #endif
     CLI_COMMAND_DEF("exit", "exit command line interface and reboot (default)", "[noreboot]", cliExitCmd),
     CLI_COMMAND_DEF("feature", "configure features",
